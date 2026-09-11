@@ -1,0 +1,110 @@
+# Container structure tests for haropz
+# Run with: container-structure-test test --image <image> --config tests/structure-test.yaml
+# https://github.com/GoogleContainerTools/container-structure-test
+
+schemaVersion: "2.0.0"
+
+metadataTest:
+  labels:
+    - key: "io.openshell.sandbox.harness"
+      value: "omnigent"
+  envVars:
+    - key: "AGENT_NAME"
+      value: "omnigent"
+    - key: "OMNIGENT_CONFIG_HOME"
+      value: "/sandbox/.omnigent"
+  user: "1001"
+  workdir: "/sandbox"
+  entrypoint: ["/usr/local/bin/entrypoint.sh"]
+  cmd: ["server"]
+
+fileExistenceTests:
+  - name: "omnigent routing config present"
+    path: "/etc/openshell/agents/omnigent.yaml"
+    shouldExist: true
+    permissions: "-rw-r--r--"
+
+  - name: "omnigent home config present (pre-baked, no setup needed)"
+    path: "/sandbox/.omnigent/config.yaml"
+    shouldExist: true
+
+  - name: "entrypoint executable"
+    path: "/usr/local/bin/entrypoint.sh"
+    shouldExist: true
+    permissions: "-rwxr-xr-x"
+
+  - name: "pi wrapper present"
+    path: "/usr/local/sbin/pi"
+    shouldExist: true
+
+  - name: "sandbox home directory"
+    path: "/sandbox"
+    shouldExist: true
+    isDirectory: true
+
+  - name: "sandbox venv present"
+    path: "/sandbox/.venv"
+    shouldExist: true
+    isDirectory: true
+
+fileContentTests:
+  - name: "omnigent config has correct version"
+    path: "/etc/openshell/agents/omnigent.yaml"
+    expectedContents:
+      - 'version: "1.0"'
+
+  - name: "omnigent config defines three model tiers"
+    path: "/etc/openshell/agents/omnigent.yaml"
+    expectedContents:
+      - "pi-haiku"
+      - "pi-sonnet"
+      - "pi-opus"
+
+  - name: "entrypoint handles omnigent and pi dispatch"
+    path: "/usr/local/bin/entrypoint.sh"
+    expectedContents:
+      - "omnigent"
+      - "pi"
+
+commandTests:
+  - name: "omnigent binary is on PATH"
+    command: "bash"
+    args: ["-c", "command -v omnigent"]
+    exitCode: 0
+
+  - name: "omni alias is on PATH"
+    command: "bash"
+    args: ["-c", "command -v omni"]
+    exitCode: 0
+
+  - name: "pi binary is on PATH"
+    command: "bash"
+    args: ["-c", "command -v pi"]
+    exitCode: 0
+
+  - name: "sandbox user is 1001"
+    command: "bash"
+    args: ["-c", "id -u"]
+    exitCode: 0
+    expectedOutput:
+      - "1001"
+
+  - name: "omnigent --version exits cleanly"
+    command: "omnigent"
+    args: ["--version"]
+    exitCode: 0
+
+  - name: "python is 3.12+"
+    command: "bash"
+    args: ["-c", "/sandbox/.venv/bin/python -c \"import sys; assert sys.version_info >= (3,12), sys.version\""]
+    exitCode: 0
+
+  - name: "config file is valid YAML"
+    command: "bash"
+    args: ["-c", "/sandbox/.venv/bin/python -c \"import yaml; yaml.safe_load(open('/etc/openshell/agents/omnigent.yaml'))\""]
+    exitCode: 0
+
+  - name: "tmux is on PATH and meets minimum version"
+    command: "bash"
+    args: ["-c", "tmux -V | grep -E 'tmux [3-9]\\.[3-9]'"]
+    exitCode: 0

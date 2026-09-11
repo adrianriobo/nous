@@ -1,0 +1,81 @@
+version: "1.0"
+
+# Omnigent routing configuration for the pi harness.
+# The router classifies each incoming task and delegates to the cheapest
+# Claude model tier that can handle it, falling back to a more capable tier
+# only when the lower tier signals insufficient capability.
+
+router:
+  strategy: complexity-based   # complexity-based | round-robin | cost-first
+  fallback: escalate           # escalate | fail | retry-same
+
+  budget:
+    # Soft warning logged when session token spend crosses this fraction.
+    warn_threshold: 0.80
+    # Hard cap; router rejects new tasks beyond this. 0 = unlimited.
+    max_tokens_per_session: 0
+
+  classifier:
+    # Prompt sent to the cheapest model to self-assess whether it can answer.
+    # Receives the user task as {task}. Must reply YES or NO.
+    self_assess_prompt: |
+      You are a routing classifier. Read the task below and decide whether
+      a fast, low-cost model can handle it reliably without errors or
+      hallucinations. Reply with exactly YES or NO — no other text.
+
+      Task:
+      {task}
+
+# Agent tiers ordered cheapest → most capable.
+# Omnigent tries each tier in order and escalates on failure or self-assess NO.
+agents:
+  - name: pi-haiku
+    model: claude-haiku-4-5@20251001
+    harness: pi
+    max_tokens: 4096
+    temperature: 0
+    triggers:
+      - simple_query
+      - factual_lookup
+      - short_completion
+      - formatting
+      - translation
+    skip_self_assess: false
+
+  - name: pi-sonnet
+    model: claude-sonnet-4-5@20250929
+    harness: pi
+    max_tokens: 16384
+    temperature: 0
+    triggers:
+      - code_review
+      - debugging
+      - test_generation
+      - medium_refactor
+      - documentation
+    skip_self_assess: false
+
+  - name: pi-opus
+    model: claude-opus-4-6
+    harness: pi
+    max_tokens: 32768
+    temperature: 0
+    triggers:
+      - architecture
+      - complex_reasoning
+      - long_context
+      - security_review
+      - multi_file_refactor
+    # Opus is the final tier; no further escalation.
+    skip_self_assess: true
+
+# Telemetry — token usage is emitted as OpenTelemetry metrics when enabled.
+telemetry:
+  enabled: "${OTEL_ENABLED:false}"
+  endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT:}"
+  service_name: haropz
+
+# Structured JSON logs to stdout; set LOG_LEVEL=debug for verbose routing traces.
+logging:
+  level: "${LOG_LEVEL:info}"
+  format: json

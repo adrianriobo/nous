@@ -1,0 +1,20 @@
+# Pre-baked ~/.omnigent/config.yaml for haropz.
+#
+# Configures the Pi harness with "original auth" — omnigent does not inject
+# any credentials; pi reads them directly from container environment variables.
+#
+# Anthropic direct:
+#   ANTHROPIC_API_KEY=sk-ant-...
+#
+# Vertex AI (GCP):
+#   GOOGLE_APPLICATION_CREDENTIALS=/sandbox/gcp-creds.json
+#   GOOGLE_CLOUD_PROJECT=my-gcp-project
+#   GOOGLE_CLOUD_LOCATION=us-east5
+#
+# This file is copied to /sandbox/.omnigent/config.yaml at build time so that
+# `omnigent setup` is not required when the container starts.
+
+harness:
+  default: pi
+  pi:
+    command: /usr/local/sbin/pi
