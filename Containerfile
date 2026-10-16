@@ -1,4 +1,6 @@
-ARG BASE_IMAGE=quay.io/aipcc/base-images/agentic/pi:1.1.0-1791981036
+# renovate: datasource=docker depName=quay.io/aipcc/base-images/agentic/pi
+ARG BASE_TAG=1.1.0-1791981036
+ARG BASE_IMAGE=quay.io/aipcc/base-images/agentic/pi:${BASE_TAG}
 
 FROM ${BASE_IMAGE}
 USER 0
