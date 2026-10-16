@@ -38,8 +38,36 @@ _inject_ca() {
     [[ -f "$ca" ]] && export NODE_EXTRA_CA_CERTS="$ca"
 }
 
+_inject_mcp() {
+    local mcp=/run/secrets/mcp.json
+    local settings=/sandbox/.pi/agent/settings.json
+    [[ -f "$mcp" ]] || return 0
+    python3 - <<'EOF'
+import json, sys
+
+settings_path = "/sandbox/.pi/agent/settings.json"
+mcp_path      = "/run/secrets/mcp.json"
+
+with open(settings_path) as f:
+    settings = json.load(f)
+
+with open(mcp_path) as f:
+    mcp = json.load(f)
+
+# Accept both {mcpServers: {...}} and a flat {name: config} map
+servers = mcp.get("mcpServers", mcp)
+existing = settings.get("mcpServers", {})
+existing.update(servers)
+settings["mcpServers"] = existing
+
+with open(settings_path, "w") as f:
+    json.dump(settings, f, indent=2)
+EOF
+}
+
 _check_auth
 _inject_ca
+_inject_mcp
 _write_pi_creds
 
 case "${1:-}" in
