@@ -40,29 +40,33 @@ _inject_ca() {
 
 _inject_mcp() {
     local mcp=/run/secrets/mcp.json
-    local settings=/sandbox/.pi/agent/settings.json
+    local target=/sandbox/.pi/agent/mcp.json
     [[ -f "$mcp" ]] || return 0
     python3 - <<'EOF' || { echo >&2 "WARN: could not inject MCP servers from ${mcp} — continuing without"; return 0; }
 import json, sys
 
-settings_path = "/sandbox/.pi/agent/settings.json"
-mcp_path      = "/run/secrets/mcp.json"
+src_path    = "/run/secrets/mcp.json"
+target_path = "/sandbox/.pi/agent/mcp.json"
 
-with open(settings_path) as f:
-    settings = json.load(f)
-
-with open(mcp_path) as f:
-    mcp = json.load(f)
+with open(src_path) as f:
+    src = json.load(f)
 
 # Accept both {mcpServers: {...}} and a flat {name: config} map
-servers = mcp.get("mcpServers", mcp)
-existing = settings.get("mcpServers", {})
-existing.update(servers)
-settings["mcpServers"] = existing
+incoming = src.get("mcpServers", src)
 
-with open(settings_path, "w") as f:
-    json.dump(settings, f, indent=2)
-print(f"[nous] injected MCP servers: {', '.join(servers.keys())}", file=sys.stderr)
+existing = {}
+try:
+    with open(target_path) as f:
+        existing = json.load(f).get("mcpServers", {})
+except FileNotFoundError:
+    pass
+
+existing.update(incoming)
+
+with open(target_path, "w") as f:
+    json.dump({"mcpServers": existing}, f, indent=2)
+
+print(f"[nous] injected MCP servers: {', '.join(incoming.keys())}", file=sys.stderr)
 EOF
 }
 
