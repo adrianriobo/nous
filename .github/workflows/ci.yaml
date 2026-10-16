@@ -68,7 +68,7 @@ jobs:
       - name: Download container-structure-test
         if: steps.cst-cache.outputs.cache-hit != 'true'
         run: |
-          curl -LsO https://storage.googleapis.com/container-structure-test/${{ env.CST_VERSION }}/container-structure-test-linux-amd64
+          curl -fsSLO https://github.com/GoogleContainerTools/container-structure-test/releases/download/${{ env.CST_VERSION }}/container-structure-test-linux-amd64
           chmod +x container-structure-test-linux-amd64
 
       - name: Run structure tests
