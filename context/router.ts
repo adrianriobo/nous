@@ -124,69 +124,74 @@ Use 'preview' mode first to see what files would be selected before doing the fu
     },
   } as any);
 
-  // ── Konflux assistant (Chai) ─────────────────────────────────────────────────
-  pi.registerTool({
-    name: "konflux",
-    label: "Konflux Assistant",
-    description: `Use for ALL Konflux questions — pipelines, builds, releases, deployments,
-onboarding, troubleshooting, best practices, component configuration, PipelineRuns,
-TaskRuns, signing, EC policies, or anything Konflux-related.
-This tool connects to Chai, the authoritative Konflux knowledge assistant.
-Do not answer Konflux questions from general knowledge — always use this tool.`,
-    parameters: {
-      type: "object",
-      properties: {
-        question: { type: "string", description: "The Konflux question to answer" },
-      },
-      required: ["question"],
-    } as any,
-    async execute(_id: string, params: any) {
-      const { readFileSync } = await import("fs") as any;
+  // ── Chai MCP — auto-discover and register as first-class tools ───────────────
+  // Reads /sandbox/.pi/agent/mcp.json (written by entrypoint), calls tools/list
+  // on the Chai endpoint, and registers each tool so it appears in <functions>
+  // rather than the separate <mcp_servers> block. Runs async at startup.
+  (async () => {
+    const { readFileSync } = await import("fs") as any;
 
-      let chai: any;
-      try {
-        const mcp = JSON.parse(readFileSync("/sandbox/.pi/agent/mcp.json", "utf8"));
-        chai = mcp.mcpServers?.chai_konflux_public;
-      } catch {
-        return { content: [{ type: "text" as const, text: "Chai not configured — mount /run/secrets/mcp.json with chai_konflux_public credentials." }] };
-      }
-      if (!chai) {
-        return { content: [{ type: "text" as const, text: "chai_konflux_public entry missing from MCP config." }] };
-      }
+    let chai: any;
+    try {
+      const mcp = JSON.parse(readFileSync("/sandbox/.pi/agent/mcp.json", "utf8"));
+      chai = mcp.mcpServers?.chai_konflux_public;
+      if (!chai) return;
+    } catch { return; }
 
-      // Call Chai via MCP JSON-RPC over HTTP
+    // Discover available tools + their schemas
+    let discoveredTools: any[] = [];
+    try {
+      const res = await (globalThis as any).fetch(chai.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...chai.headers },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
+      });
+      const data = await res.json();
+      discoveredTools = data?.result?.tools ?? [];
+    } catch { return; }
+
+    // Helper: call a Chai tool and return its text response
+    async function callChai(toolName: string, args: any): Promise<string> {
       const res = await (globalThis as any).fetch(chai.url, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...chai.headers },
         body: JSON.stringify({
           jsonrpc: "2.0", id: 1,
           method: "tools/call",
-          params: { name: "ask_persona", arguments: { question: params.question } },
+          params: { name: toolName, arguments: args },
         }),
       });
-
-      if (!res.ok) {
-        return { content: [{ type: "text" as const, text: `Chai HTTP ${res.status}: ${await res.text()}` }] };
-      }
-
-      // Handle both plain JSON and SSE (text/event-stream) responses
-      const contentType: string = res.headers.get("content-type") ?? "";
-      let answer: string;
-      if (contentType.includes("event-stream")) {
+      if (!res.ok) return `Chai HTTP ${res.status}: ${await res.text()}`;
+      const ct: string = res.headers.get("content-type") ?? "";
+      if (ct.includes("event-stream")) {
         const raw = await res.text();
-        const blocks = raw.split("\n").filter((l: string) => l.startsWith("data:")).map((l: string) => {
-          try { return JSON.parse(l.slice(5)); } catch { return null; }
-        }).filter(Boolean);
+        const blocks = raw.split("\n")
+          .filter((l: string) => l.startsWith("data:"))
+          .map((l: string) => { try { return JSON.parse(l.slice(5)); } catch { return null; } })
+          .filter(Boolean);
         const last = blocks[blocks.length - 1];
-        answer = last?.result?.content?.[0]?.text ?? last?.params?.delta?.text ?? JSON.stringify(last);
-      } else {
-        const data = await res.json();
-        answer = data?.result?.content?.[0]?.text ?? JSON.stringify(data);
+        return last?.result?.content?.[0]?.text ?? last?.params?.delta?.text ?? JSON.stringify(last);
       }
+      const data = await res.json();
+      return data?.result?.content?.[0]?.text ?? JSON.stringify(data);
+    }
 
-      return { content: [{ type: "text" as const, text: answer }] };
-    },
-  } as any);
+    // Register each discovered tool as a first-class pi tool
+    for (const tool of discoveredTools) {
+      pi.registerTool({
+        name: `chai_${tool.name}`,
+        label: `Chai: ${tool.name}`,
+        description: tool.description ?? `Chai Konflux tool: ${tool.name}`,
+        parameters: tool.inputSchema ?? { type: "object", properties: {}, required: [] },
+        async execute(_id: string, params: any) {
+          const text = await callChai(tool.name, params);
+          return { content: [{ type: "text" as const, text }] };
+        },
+      } as any);
+    }
+
+    pi.ui?.setStatus("chai", `Chai: ${discoveredTools.map((t: any) => t.name).join(", ")} registered`);
+  })();
 
   // ── Web search tool ─────────────────────────────────────────────────────────
   pi.registerTool({
