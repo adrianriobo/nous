@@ -31,7 +31,15 @@ _check_auth() {
     return 1
 }
 
+_inject_ca() {
+    local ca=/run/secrets/ca-bundle.crt
+    # NODE_EXTRA_CA_CERTS already set explicitly — honour it as-is
+    [[ -n "${NODE_EXTRA_CA_CERTS:-}" ]] && return 0
+    [[ -f "$ca" ]] && export NODE_EXTRA_CA_CERTS="$ca"
+}
+
 _check_auth
+_inject_ca
 _write_pi_creds
 
 case "${1:-}" in
