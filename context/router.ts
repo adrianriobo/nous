@@ -124,6 +124,70 @@ Use 'preview' mode first to see what files would be selected before doing the fu
     },
   } as any);
 
+  // ── Konflux assistant (Chai) ─────────────────────────────────────────────────
+  pi.registerTool({
+    name: "konflux",
+    label: "Konflux Assistant",
+    description: `Use for ALL Konflux questions — pipelines, builds, releases, deployments,
+onboarding, troubleshooting, best practices, component configuration, PipelineRuns,
+TaskRuns, signing, EC policies, or anything Konflux-related.
+This tool connects to Chai, the authoritative Konflux knowledge assistant.
+Do not answer Konflux questions from general knowledge — always use this tool.`,
+    parameters: {
+      type: "object",
+      properties: {
+        question: { type: "string", description: "The Konflux question to answer" },
+      },
+      required: ["question"],
+    } as any,
+    async execute(_id: string, params: any) {
+      const { readFileSync } = await import("fs") as any;
+
+      let chai: any;
+      try {
+        const mcp = JSON.parse(readFileSync("/sandbox/.pi/agent/mcp.json", "utf8"));
+        chai = mcp.mcpServers?.chai_konflux_public;
+      } catch {
+        return { content: [{ type: "text" as const, text: "Chai not configured — mount /run/secrets/mcp.json with chai_konflux_public credentials." }] };
+      }
+      if (!chai) {
+        return { content: [{ type: "text" as const, text: "chai_konflux_public entry missing from MCP config." }] };
+      }
+
+      // Call Chai via MCP JSON-RPC over HTTP
+      const res = await (globalThis as any).fetch(chai.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...chai.headers },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: 1,
+          method: "tools/call",
+          params: { name: "ask_persona", arguments: { question: params.question } },
+        }),
+      });
+
+      if (!res.ok) {
+        return { content: [{ type: "text" as const, text: `Chai HTTP ${res.status}: ${await res.text()}` }] };
+      }
+
+      // Handle both plain JSON and SSE (text/event-stream) responses
+      const contentType: string = res.headers.get("content-type") ?? "";
+      let answer: string;
+      if (contentType.includes("event-stream")) {
+        const raw = await res.text();
+        const blocks = raw.split("\n").filter((l: string) => l.startsWith("data:")).map((l: string) => {
+          try { return JSON.parse(l.slice(5)); } catch { return null; }
+        }).filter(Boolean);
+        const last = blocks[blocks.length - 1];
+        answer = last?.result?.content?.[0]?.text ?? last?.params?.delta?.text ?? JSON.stringify(last);
+      } else {
+        const data = await res.json();
+        answer = data?.result?.content?.[0]?.text ?? JSON.stringify(data);
+      }
+
+      return { content: [{ type: "text" as const, text: answer }] };
+    },
+  } as any);
+
   // ── Web search tool ─────────────────────────────────────────────────────────
   pi.registerTool({
     name: "web_search",
