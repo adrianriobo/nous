@@ -11,6 +11,8 @@ env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/nous
   # renovate: datasource=github-releases depName=NVIDIA/OpenShell
   OPENSHELL_VERSION: "v0.1.4"
+  # renovate: datasource=github-releases depName=GoogleContainerTools/container-structure-test
+  CST_VERSION: "v1.16.0"
 
 jobs:
   # ── Build ──────────────────────────────────────────────────────────────────
@@ -61,12 +63,12 @@ jobs:
         uses: actions/cache@v6
         with:
           path: container-structure-test-linux-amd64
-          key: cst-v1.16.0
+          key: cst-${{ env.CST_VERSION }}
 
       - name: Download container-structure-test
         if: steps.cst-cache.outputs.cache-hit != 'true'
         run: |
-          curl -LsO https://storage.googleapis.com/container-structure-test/v1.16.0/container-structure-test-linux-amd64
+          curl -LsO https://storage.googleapis.com/container-structure-test/${{ env.CST_VERSION }}/container-structure-test-linux-amd64
           chmod +x container-structure-test-linux-amd64
 
       - name: Run structure tests
