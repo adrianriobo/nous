@@ -42,7 +42,7 @@ _inject_mcp() {
     local mcp=/run/secrets/mcp.json
     local settings=/sandbox/.pi/agent/settings.json
     [[ -f "$mcp" ]] || return 0
-    python3 - <<'EOF'
+    python3 - <<'EOF' || { echo >&2 "WARN: could not inject MCP servers from ${mcp} — continuing without"; return 0; }
 import json, sys
 
 settings_path = "/sandbox/.pi/agent/settings.json"
@@ -62,6 +62,7 @@ settings["mcpServers"] = existing
 
 with open(settings_path, "w") as f:
     json.dump(settings, f, indent=2)
+print(f"[nous] injected MCP servers: {', '.join(servers.keys())}", file=sys.stderr)
 EOF
 }
 
