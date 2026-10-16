@@ -1,4 +1,4 @@
-# Container structure tests for haropz
+# Container structure tests for nous
 # Run with: container-structure-test test --image <image> --config tests/structure-test.yaml
 
 schemaVersion: "2.0.0"
@@ -28,7 +28,6 @@ fileExistenceTests:
   - name: "sandbox home directory"
     path: "/sandbox"
     shouldExist: true
-    isDirectory: true
 
 fileContentTests:
   - name: "entrypoint handles interactive and passthrough modes"

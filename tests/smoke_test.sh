@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runtime smoke tests for haropz.
+# Runtime smoke tests for nous.
 # Usage: bash tests/smoke_test.sh <image>
 set -euo pipefail
 

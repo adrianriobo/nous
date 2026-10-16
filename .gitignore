@@ -2,3 +2,4 @@
 .claude/
 *.env
 .env*
+container-structure-test-linux-amd64

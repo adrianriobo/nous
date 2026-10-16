@@ -1,41 +1,43 @@
 version: 1
 
-# OpenShell network policy for haropz.
+# OpenShell network policy for nous.
 #
-# OpenShell denies all outbound by default — every destination must be listed
-# explicitly. This policy allows only what haropz needs:
-#   - Vertex AI inference endpoints (per region)
-#   - Google auth / token refresh
-#   - GitHub (git clone for PR code reviews)
+# OpenShell denies all outbound by default. This policy allows only what
+# nous needs: Vertex AI inference, Google auth, and GitHub for PR clones.
 #
-# Web search (DuckDuckGo) is intentionally excluded. See haropz-policy-websearch.yaml
-# to enable it when running a non-restricted session.
+# Web search (DuckDuckGo) is intentionally excluded — see nous-policy-websearch.yaml.
 #
 # Apply at sandbox creation:
 #   openshell sandbox create \
-#     --from quay.io/aipcc/haropz:latest \
-#     --provider vertex-haropz \
-#     --policy ./security/haropz-policy.yaml
+#     --from ghcr.io/aipcc/nous:latest \
+#     --provider vertex-nous \
+#     --policy ./security/nous-policy.yaml
 #
 # Update a running sandbox:
-#   openshell policy update my-sandbox --policy ./security/haropz-policy.yaml
+#   openshell policy update my-sandbox --policy ./security/nous-policy.yaml
 #
-# Dry-run (preview without applying):
-#   openshell policy update my-sandbox --policy ./security/haropz-policy.yaml --dry-run
-#
-# Binary paths were resolved inside the image with:
+# Binary paths resolved inside the image:
 #   readlink -f $(command -v node)  →  /usr/bin/node-26
 #   readlink -f $(command -v git)   →  /usr/bin/git
 
+# Pi reads its runtime from /opt/pi (base image install). Landlock blocks
+# access to paths not listed here or in the automatic baseline (/usr, /lib,
+# /etc, /tmp). include_workdir keeps /sandbox read-write.
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /opt/pi
+
 network_policies:
 
-  # ── Vertex AI inference ──────────────────────────────────────────────────────
+  # ── Vertex AI inference (global + per-region) ─────────────────────────────
   # Add or remove regions to match your CLOUD_ML_REGION setting.
   vertex-ai-global:
     endpoints:
       - host: aiplatform.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26
@@ -45,6 +47,7 @@ network_policies:
       - host: us-east5-aiplatform.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26
@@ -54,6 +57,7 @@ network_policies:
       - host: us-central1-aiplatform.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26
@@ -63,6 +67,7 @@ network_policies:
       - host: europe-west1-aiplatform.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26
@@ -72,42 +77,43 @@ network_policies:
       - host: asia-southeast1-aiplatform.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26
 
-  # ── Google auth / token refresh ───────────────────────────────────────────────
+  # ── Google auth / token refresh ───────────────────────────────────────────
   google-auth:
     endpoints:
       - host: oauth2.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
       - host: iamcredentials.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
       - host: accounts.google.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26
 
-  # ── GitHub — git clone for PR code reviews ────────────────────────────────────
+  # ── GitHub — git clone for PR code reviews ────────────────────────────────
   github-git:
     endpoints:
       - host: github.com
         port: 443
-        protocol: rest
         enforcement: enforce
       - host: codeload.github.com
         port: 443
-        protocol: rest
         enforcement: enforce
       - host: objects.githubusercontent.com
         port: 443
-        protocol: rest
         enforcement: enforce
     binaries:
       - path: /usr/bin/git
@@ -117,6 +123,7 @@ network_policies:
       - host: api.github.com
         port: 443
         protocol: rest
+        access: read-only
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26

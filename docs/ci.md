@@ -18,7 +18,7 @@ push to main / v* tag
   container-structure-test
         │
         ▼
-  podman push → ghcr.io/aipcc/haropz:{sha, latest, version}
+  podman push → ghcr.io/aipcc/nous:{sha, latest, version}
 ```
 
 **No secrets required** beyond the auto-provided `GITHUB_TOKEN` (needs `packages: write` — already set in the workflow).
@@ -38,7 +38,7 @@ Triggers on push to `main` and pull requests. Runs the full agent stack without 
   PR / push to main
         │
         ▼
-  podman build → haropz:test
+  podman build → nous:test
         │
         ▼
   install OpenShell
@@ -56,8 +56,8 @@ Triggers on push to `main` and pull requests. Runs the full agent stack without 
         │
         ▼
   openshell sandbox create \
-    --from haropz:test \
-    --policy /tmp/haropz-policy-integration-test.yaml \
+    --from nous:test \
+    --policy /tmp/nous-policy-integration-test.yaml \
     --env VERTEX_API_BASE_URL=http://<runner-ip>:4010 \
     --no-keep \
     -- pi --print -

@@ -1,8 +1,8 @@
-# haropz — agent topology
+# nous — agent topology
 
 ## Architecture
 
-haropz wraps [pi](https://github.com/earendil-works/pi) with a single TypeScript extension (`context/router.ts`) that provides:
+nous wraps [pi](https://github.com/earendil-works/pi) with a single TypeScript extension (`context/router.ts`) that provides:
 
 1. **Virtual model router** — registers a `router/auto` model that selects the right Claude tier per turn
 2. **`web_search` tool** — DuckDuckGo via fetch
@@ -80,9 +80,8 @@ Policy files live in `security/`:
 
 | File | Purpose |
 |---|---|
-| `security/haropz-policy.yaml` | Production default — Vertex AI + GitHub |
-| `security/haropz-policy-websearch.yaml` | Adds DuckDuckGo |
-| `security/haropz-policy-integration-test.yaml` | Template for CI — IP substituted at runtime |
+| `security/nous-policy.yaml` | Production default — Vertex AI + GitHub |
+| `security/nous-policy-websearch.yaml` | Adds DuckDuckGo |
 
 Rules are scoped to specific binaries (`/usr/bin/node-26` for pi/ocr, `/usr/bin/git` for clone). Binary paths were resolved inside the image with `readlink -f $(command -v node)`.
 
@@ -100,7 +99,7 @@ push to main / v* tag
   container-structure-test
         │
         ▼
-  podman push → ghcr.io/aipcc/haropz:{sha,latest,version}
+  podman push → ghcr.io/aipcc/nous:{sha,latest,version}
 ```
 
 Runs on `ubuntu-26.04`. Uses `GITHUB_TOKEN` (auto-provided) for GHCR access — no additional secrets.
@@ -111,7 +110,7 @@ Runs on `ubuntu-26.04`. Uses `GITHUB_TOKEN` (auto-provided) for GHCR access — 
   PR / push to main
         │
         ▼
-  podman build → haropz:test
+  podman build → nous:test
         │
         ▼
   install OpenShell (curl installer, systemd user service)
@@ -120,18 +119,17 @@ Runs on `ubuntu-26.04`. Uses `GITHUB_TOKEN` (auto-provided) for GHCR access — 
   start mock-vertex-server.mjs on :4010
         │  (emits Anthropic SSE stream, no real API key needed)
         ▼
-  openshell sandbox create \
-    --from haropz:test \
-    --policy /tmp/haropz-policy-integration-test.yaml \
-    --env VERTEX_API_BASE_URL=http://<runner-ip>:4010 \
-    --no-keep \
-    -- pi --print -
+  openshell sandbox create --from nous:test \
+    --policy security/nous-policy.yaml --dry-run
+  openshell sandbox create --from nous:test \
+    --policy security/nous-policy-websearch.yaml --dry-run
+        │
+        ▼
+  [functional job] podman run nous:test
+    --env VERTEX_API_BASE_URL=http://<runner-ip>:4010
         │
         ▼
   assert output contains expected text
-        │
-        ▼
-  yamllint + openshell --dry-run on production policy files
 ```
 
 Runs on `ubuntu-26.04` (kernel 7.0, Landlock ABI satisfied). No Vertex AI credentials required.
@@ -148,7 +146,7 @@ podman run --rm -it \
   --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
   --env CLOUD_ML_REGION=us-east5 \
   -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
-  ghcr.io/aipcc/haropz:latest
+  ghcr.io/aipcc/nous:latest
 
 # Pipe a task
 echo 'your task here' | \
@@ -156,7 +154,7 @@ echo 'your task here' | \
   --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
   --env CLOUD_ML_REGION=us-east5 \
   -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
-  ghcr.io/aipcc/haropz:latest
+  ghcr.io/aipcc/nous:latest
 ```
 
 > Add `--storage-driver=vfs` when running inside a privileged container (CI, dev sandbox).
@@ -166,23 +164,23 @@ echo 'your task here' | \
 ```bash
 # Interactive
 openshell sandbox create \
-  --from ghcr.io/aipcc/haropz:latest \
-  --provider vertex-haropz \
-  --policy ./security/haropz-policy.yaml
+  --from ghcr.io/aipcc/nous:latest \
+  --provider vertex-nous \
+  --policy ./security/nous-policy.yaml
 
 # Pipe a task
 echo 'Review PR https://github.com/OWNER/REPO/pull/NNN' | \
   openshell sandbox create \
-  --from ghcr.io/aipcc/haropz:latest \
-  --provider vertex-haropz \
-  --policy ./security/haropz-policy.yaml \
+  --from ghcr.io/aipcc/nous:latest \
+  --provider vertex-nous \
+  --policy ./security/nous-policy.yaml \
   -- pi --print -
 
 # Update policy on a running sandbox
-openshell policy update my-sandbox --policy ./security/haropz-policy.yaml
+openshell policy update my-sandbox --policy ./security/nous-policy.yaml
 
 # Dry-run before applying
-openshell policy update my-sandbox --policy ./security/haropz-policy.yaml --dry-run
+openshell policy update my-sandbox --policy ./security/nous-policy.yaml --dry-run
 
 # Debug shell
 openshell sandbox exec -n my-sandbox --tty -- /bin/bash
