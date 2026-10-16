@@ -1,6 +1,42 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
+  "extends": ["config:recommended"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update version-pinned tools declared with renovate inline comments in workflows",
+      "fileMatch": ["^\\.github/workflows/[^/]+\\.ya?ml$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\n]+)\\n\\s+\\w+: \"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "{{datasource}}"
+    },
+    {
+      "customType": "regex",
+      "description": "Update npm packages pinned as ARG instructions in Containerfile",
+      "fileMatch": ["^Containerfile$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\n]+)\\nARG \\w+=(?<currentValue>[^\\n]+)"
+      ],
+      "datasourceTemplate": "{{datasource}}"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Group GitHub Actions updates into a single PR",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    },
+    {
+      "description": "Group all regex-managed versions (OpenShell, CST, npm packages in Containerfile)",
+      "matchManagers": ["regex"],
+      "groupName": "pinned dependencies"
+    },
+    {
+      "description": "Base image uses semver+buildnumber tags — treat as stable releases",
+      "matchPackageNames": ["quay.io/aipcc/base-images/agentic/pi"],
+      "versioning": "loose",
+      "ignoreUnstable": false
+    }
   ]
 }

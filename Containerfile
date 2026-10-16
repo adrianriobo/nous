@@ -6,6 +6,10 @@ USER 0
 ARG VERSION=0.1.0
 ARG NAME=nous
 ARG SUMMARY="Minimal pi harness with Vertex AI integration"
+# renovate: datasource=npm depName=pi-provider-vertex-anthropic
+ARG PI_PROVIDER_VERTEX_VERSION=0.1.3
+# renovate: datasource=npm depName=@alibaba-group/open-code-review
+ARG OPEN_CODE_REVIEW_VERSION=1.13.0
 
 LABEL io.openshell.sandbox.harness="pi" \
       io.openshell.harness.version="${VERSION}" \
@@ -31,8 +35,8 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Install pi provider and tools, fix sandbox ownership.
 RUN mkdir -p /sandbox/.pi/agent/extensions \
-    && HOME=/sandbox pi install npm:pi-provider-vertex-anthropic \
-    && npm install -g --allow-scripts=@alibaba-group/open-code-review @alibaba-group/open-code-review \
+    && HOME=/sandbox pi install npm:pi-provider-vertex-anthropic@${PI_PROVIDER_VERTEX_VERSION} \
+    && npm install -g --allow-scripts=@alibaba-group/open-code-review @alibaba-group/open-code-review@${OPEN_CODE_REVIEW_VERSION} \
     && chown -R 1001:0 /sandbox
 
 USER 1001
