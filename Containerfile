@@ -4,7 +4,7 @@ FROM ${BASE_IMAGE}
 USER 0
 
 ARG VERSION=0.1.0
-ARG NAME=haropz
+ARG NAME=nous
 ARG SUMMARY="Minimal pi harness with Vertex AI integration"
 
 LABEL io.openshell.sandbox.harness="pi" \

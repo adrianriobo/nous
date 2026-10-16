@@ -1,0 +1,306 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/nous
+  # renovate: datasource=github-releases depName=NVIDIA/OpenShell
+  OPENSHELL_VERSION: "v0.1.4"
+
+jobs:
+  # ── Build ──────────────────────────────────────────────────────────────────
+  # Builds the image once, runs structure tests, uploads a tar artifact for
+  # all downstream test jobs, and pushes to GHCR on non-PR events.
+  build:
+    name: Build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Set image tags
+        id: tags
+        run: |
+          SHA_TAG="${{ env.IMAGE }}:${{ github.sha }}"
+          LATEST_TAG="${{ env.IMAGE }}:latest"
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${{ github.ref_name }}"
+            echo "tags=${SHA_TAG},${LATEST_TAG},${{ env.IMAGE }}:${VERSION}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tags=${SHA_TAG},${LATEST_TAG}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build image
+        run: |
+          IFS=',' read -ra TAGS <<< "${{ steps.tags.outputs.tags }}"
+          TAG_ARGS=(-t nous:test)
+          for t in "${TAGS[@]}"; do TAG_ARGS+=(-t "$t"); done
+          podman build \
+            "${TAG_ARGS[@]}" \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -f Containerfile .
+
+      - name: Cache container-structure-test
+        id: cst-cache
+        uses: actions/cache@v4
+        with:
+          path: container-structure-test-linux-amd64
+          key: cst-v1.16.0
+
+      - name: Download container-structure-test
+        if: steps.cst-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -LsO https://storage.googleapis.com/container-structure-test/v1.16.0/container-structure-test-linux-amd64
+          chmod +x container-structure-test-linux-amd64
+
+      - name: Run structure tests
+        run: |
+          chmod +x container-structure-test-linux-amd64
+          podman system service -t 0 unix:///tmp/podman.sock &
+          sleep 2
+          DOCKER_HOST=unix:///tmp/podman.sock \
+            ./container-structure-test-linux-amd64 test \
+              --image nous:test \
+              --config tests/structure-test.yaml
+
+      - name: Export image artifact
+        run: podman save nous:test -o /tmp/nous-test.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nous-image
+          path: /tmp/nous-test.tar
+          retention-days: 1
+
+      - name: Push image
+        if: github.event_name != 'pull_request'
+        run: |
+          IFS=',' read -ra TAGS <<< "${{ steps.tags.outputs.tags }}"
+          for t in "${TAGS[@]}"; do podman push "$t"; done
+
+  # ── Policy validation ──────────────────────────────────────────────────────
+  # Creates a real sandbox with each production policy file to confirm OpenShell
+  # accepts the schema. Runs echo ok and exits immediately via --no-keep.
+  policy-validation:
+    name: Policy Validation
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nous-image
+          path: /tmp
+
+      - name: Load image
+        run: podman load -i /tmp/nous-test.tar
+
+      - name: Start local OCI registry
+        run: |
+          podman run -d --name local-registry \
+            -p 5000:5000 \
+            docker.io/library/registry:2
+          sleep 2
+
+      - name: Push image to local registry
+        run: |
+          podman tag nous:test localhost:5000/nous:test
+          podman push --tls-verify=false localhost:5000/nous:test
+
+      - name: Cache OpenShell
+        id: openshell-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin/openshell
+          key: openshell-linux-amd64-${{ env.OPENSHELL_VERSION }}
+
+      - name: Install OpenShell
+        if: steps.openshell-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
+          sleep 3
+
+      - name: Add OpenShell to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify OpenShell
+        run: openshell --version
+
+      - name: Validate nous-policy.yaml
+        run: |
+          openshell sandbox create \
+            --from localhost:5000/nous:test \
+            --policy ./security/nous-policy.yaml \
+            --no-keep \
+            -- echo ok
+
+      - name: Validate nous-policy-websearch.yaml
+        run: |
+          openshell sandbox create \
+            --from localhost:5000/nous:test \
+            --policy ./security/nous-policy-websearch.yaml \
+            --no-keep \
+            -- echo ok
+
+  # ── Functional smoke test ──────────────────────────────────────────────────
+  # Fast sanity check: runs pi with a plain mock Vertex response via podman.
+  # Verifies the container starts, auth bypass works, and pi produces output.
+  # Full egress enforcement is validated in the openshell-egress job.
+  functional:
+    name: Functional — Smoke Test (pi + mock Vertex)
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nous-image
+          path: /tmp
+
+      - name: Load image
+        run: podman load -i /tmp/nous-test.tar
+
+      - name: Start mock Vertex server
+        run: |
+          node tests/mock-vertex-server.mjs &
+          echo "MOCK_PID=$!" >> "$GITHUB_ENV"
+          for i in $(seq 1 10); do
+            nc -z 127.0.0.1 4010 2>/dev/null && break
+            sleep 1
+          done
+          echo "Mock server ready"
+
+      - name: "Test: pi responds to a prompt"
+        run: |
+          OUTPUT=$(podman run --rm \
+            --network=host \
+            --env ANTHROPIC_VERTEX_PROJECT_ID=test-project \
+            --env CLOUD_ML_REGION=us-east5 \
+            --env VERTEX_API_BASE_URL=http://127.0.0.1:4010 \
+            nous:test \
+            --print 'say hello')
+          echo "--- output ---"
+          echo "$OUTPUT"
+          echo "--- end ---"
+          echo "$OUTPUT" | grep -qi "hello" \
+            || { echo "FAIL: expected 'hello' in output"; exit 1; }
+          echo "PASS: pi started and responded"
+
+      - name: Stop mock server
+        if: always()
+        run: kill "$MOCK_PID" 2>/dev/null || true
+
+  # ── OpenShell egress enforcement ───────────────────────────────────────────
+  # Validates that the production policy files enforce egress correctly.
+  # Uses the actual policies from security/ — no test-specific overrides.
+  #
+  # Allowed: nous-policy-websearch.yaml includes lite.duckduckgo.com.
+  #          node fetch must succeed (any HTTP response).
+  #
+  # Blocked: nous-policy.yaml excludes lite.duckduckgo.com.
+  #          node fetch must fail with a network error.
+  openshell-egress:
+    name: OpenShell Egress Enforcement
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nous-image
+          path: /tmp
+
+      - name: Load image
+        run: podman load -i /tmp/nous-test.tar
+
+      - name: Start local OCI registry
+        run: |
+          podman run -d --name local-registry \
+            -p 5000:5000 \
+            docker.io/library/registry:2
+          sleep 2
+
+      - name: Push image to local registry
+        run: |
+          podman tag nous:test localhost:5000/nous:test
+          podman push --tls-verify=false localhost:5000/nous:test
+
+      - name: Cache OpenShell
+        id: openshell-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin/openshell
+          key: openshell-linux-amd64-${{ env.OPENSHELL_VERSION }}
+
+      - name: Install OpenShell
+        if: steps.openshell-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
+          sleep 3
+
+      - name: Add OpenShell to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify OpenShell
+        run: openshell --version
+
+      - name: "Test: egress allowed — DuckDuckGo reachable under websearch policy"
+        run: |
+          openshell sandbox create \
+            --from localhost:5000/nous:test \
+            --policy ./security/nous-policy-websearch.yaml \
+            --no-keep \
+            -- node -e "
+              fetch('https://lite.duckduckgo.com/lite/?q=openShell')
+                .then(r => { console.log('HTTP', r.status); process.exit(0); })
+                .catch(e => { console.error('FAIL:', e.message); process.exit(1); })
+            "
+          echo "PASS: DuckDuckGo reachable — websearch policy allows it"
+
+      - name: "Test: egress blocked — DuckDuckGo unreachable under base policy"
+        run: |
+          if openshell sandbox create \
+            --from localhost:5000/nous:test \
+            --policy ./security/nous-policy.yaml \
+            --no-keep \
+            -- node -e "
+              fetch('https://lite.duckduckgo.com/lite/?q=openShell')
+                .then(r => { console.log('FAIL: got HTTP', r.status); process.exit(0); })
+                .catch(e => { console.error('Blocked as expected:', e.message); process.exit(1); })
+            "; then
+            echo "FAIL: DuckDuckGo should be blocked by base policy"
+            exit 1
+          fi
+          echo "PASS: DuckDuckGo blocked — base policy excludes it"

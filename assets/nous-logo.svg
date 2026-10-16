@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="bg" cx="45%" cy="38%" r="68%">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#07070f"/>
+    </radialGradient>
+    <linearGradient id="nuGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c7d2fe"/>
+      <stop offset="55%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="nodeglow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="ringglow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="200" height="200" rx="28" fill="url(#bg)"/>
+
+  <!-- Outer ring — containment / OpenShell boundary -->
+  <circle cx="100" cy="94" r="72" fill="none" stroke="#3730a3" stroke-width="1" opacity="0.5"
+          filter="url(#ringglow)"/>
+
+  <!-- Faint spoke lines from outer ring to each node (neural-network feel) -->
+  <line x1="100" y1="22" x2="100" y2="65" stroke="#4f46e5" stroke-width="1" opacity="0.18"/>
+  <line x1="29"  y1="95" x2="58"  y2="90" stroke="#4f46e5" stroke-width="1" opacity="0.18"/>
+  <line x1="171" y1="95" x2="142" y2="90" stroke="#4f46e5" stroke-width="1" opacity="0.18"/>
+  <line x1="100" y1="166" x2="100" y2="140" stroke="#4f46e5" stroke-width="1" opacity="0.18"/>
+
+  <!-- Rim dots where spokes meet the ring -->
+  <circle cx="100" cy="22"  r="2.5" fill="#4338ca" opacity="0.5"/>
+  <circle cx="29"  cy="95"  r="2.5" fill="#4338ca" opacity="0.5"/>
+  <circle cx="171" cy="95"  r="2.5" fill="#4338ca" opacity="0.5"/>
+  <circle cx="100" cy="166" r="2.5" fill="#4338ca" opacity="0.5"/>
+
+  <!-- Halo behind ν stroke -->
+  <path d="M 58 68 L 100 136 L 142 68"
+        fill="none" stroke="#4f46e5" stroke-width="20"
+        stroke-linecap="round" stroke-linejoin="round" opacity="0.12"/>
+
+  <!-- Main ν (Greek nu) stroke -->
+  <path d="M 58 68 L 100 136 L 142 68"
+        fill="none" stroke="url(#nuGrad)" stroke-width="7.5"
+        stroke-linecap="round" stroke-linejoin="round"
+        filter="url(#glow)"/>
+
+  <!-- Top-left node -->
+  <circle cx="58" cy="68" r="7"   fill="#3730a3" filter="url(#nodeglow)"/>
+  <circle cx="58" cy="68" r="4"   fill="#818cf8"/>
+  <circle cx="58" cy="68" r="1.8" fill="#e0e7ff"/>
+
+  <!-- Top-right node -->
+  <circle cx="142" cy="68" r="7"   fill="#3730a3" filter="url(#nodeglow)"/>
+  <circle cx="142" cy="68" r="4"   fill="#818cf8"/>
+  <circle cx="142" cy="68" r="1.8" fill="#e0e7ff"/>
+
+  <!-- Bottom-center node — apex of the ν, slightly larger -->
+  <circle cx="100" cy="136" r="9"   fill="#312e81" filter="url(#nodeglow)"/>
+  <circle cx="100" cy="136" r="5.5" fill="#6366f1"/>
+  <circle cx="100" cy="136" r="2.2" fill="#e0e7ff"/>
+
+  <!-- NOUS wordmark -->
+  <text x="100" y="176"
+        text-anchor="middle"
+        font-family="ui-monospace, 'Cascadia Code', 'SF Mono', Monaco, monospace"
+        font-size="13"
+        font-weight="400"
+        letter-spacing="8"
+        fill="#a5b4fc"
+        opacity="0.7">NOUS</text>
+</svg>

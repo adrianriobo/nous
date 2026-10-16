@@ -1,6 +1,10 @@
-# haropz
+<p align="center">
+  <img src="assets/nous-logo.svg" alt="nous" width="140"/>
+</p>
 
-A production-ready [pi](https://github.com/earendil-works/pi) coding agent with Vertex AI, built for secure enterprise environments.
+<h1 align="center">nous</h1>
+
+<p align="center">A production-ready <a href="https://github.com/earendil-works/pi">pi</a> coding agent with Vertex AI, built for secure enterprise environments.</p>
 
 ## What you get
 
@@ -20,7 +24,7 @@ podman run --rm -it \
   --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
   --env CLOUD_ML_REGION=us-east5 \
   -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
-  ghcr.io/aipcc/haropz:latest
+  ghcr.io/aipcc/nous:latest
 
 # Or pipe a task
 echo 'Review PR https://github.com/OWNER/REPO/pull/42' | \
@@ -28,12 +32,12 @@ echo 'Review PR https://github.com/OWNER/REPO/pull/42' | \
   --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
   --env CLOUD_ML_REGION=us-east5 \
   -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
-  ghcr.io/aipcc/haropz:latest
+  ghcr.io/aipcc/nous:latest
 ```
 
 ## Credentials
 
-haropz needs two env vars and Google credentials:
+nous needs two env vars and Google credentials:
 
 | Variable | Description |
 |---|---|
@@ -45,7 +49,7 @@ For credentials, mount your ADC file (shown above) or set `GOOGLE_APPLICATION_CR
 ## Build your own
 
 ```bash
-git clone https://github.com/aipcc/haropz
+git clone https://github.com/aipcc/nous
 make build
 ```
 
@@ -53,6 +57,6 @@ make build
 
 | Topic | Doc |
 |---|---|
-| Running with podman, OpenShell, and integration tests | [docs/running.md](docs/running.md) |
+| Running with podman and OpenShell | [docs/running.md](docs/running.md) |
 | CI/CD workflows and mock Vertex server | [docs/ci.md](docs/ci.md) |
 | Router logic, model tiers, tools, egress architecture | [AGENTS.md](AGENTS.md) |

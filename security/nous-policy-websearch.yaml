@@ -1,30 +1,35 @@
 version: 1
 
-# OpenShell network policy for haropz with web search enabled.
+# OpenShell network policy for nous with web search enabled.
 #
-# Extends haropz-policy.yaml by adding DuckDuckGo as an allowed endpoint.
+# Extends nous-policy.yaml by adding DuckDuckGo as an allowed endpoint.
 # Only use this policy when running a general-purpose session where internet
 # search is acceptable. Do NOT use for code review sessions involving
 # internal or confidential source code.
 #
-# Also set ALLOW_WEB_SEARCH=1 in the sandbox environment — the application-layer
-# egress guard in router.ts must be relaxed in addition to this platform policy.
-#
 # Apply:
 #   openshell sandbox create \
-#     --from quay.io/aipcc/haropz:latest \
-#     --provider vertex-haropz \
-#     --policy ./security/haropz-policy-websearch.yaml \
-#     --env ALLOW_WEB_SEARCH=1
+#     --from ghcr.io/aipcc/nous:latest \
+#     --provider vertex-nous \
+#     --policy ./security/nous-policy-websearch.yaml
+
+# Pi reads its runtime from /opt/pi (base image install). Landlock blocks
+# access to paths not listed here or in the automatic baseline (/usr, /lib,
+# /etc, /tmp). include_workdir keeps /sandbox read-write.
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /opt/pi
 
 network_policies:
 
-  # ── Vertex AI inference ──────────────────────────────────────────────────────
+  # ── Vertex AI inference ──────────────────────────────────────────────────
   vertex-ai-global:
     endpoints:
       - host: aiplatform.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26
@@ -34,6 +39,7 @@ network_policies:
       - host: us-east5-aiplatform.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26
@@ -43,6 +49,7 @@ network_policies:
       - host: us-central1-aiplatform.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26
@@ -52,6 +59,7 @@ network_policies:
       - host: europe-west1-aiplatform.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26
@@ -61,42 +69,43 @@ network_policies:
       - host: asia-southeast1-aiplatform.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26
 
-  # ── Google auth / token refresh ───────────────────────────────────────────────
+  # ── Google auth / token refresh ──────────────────────────────────────────
   google-auth:
     endpoints:
       - host: oauth2.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
       - host: iamcredentials.googleapis.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
       - host: accounts.google.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26
 
-  # ── GitHub — git clone for PR code reviews ────────────────────────────────────
+  # ── GitHub — git clone for PR code reviews ───────────────────────────────
   github-git:
     endpoints:
       - host: github.com
         port: 443
-        protocol: rest
         enforcement: enforce
       - host: codeload.github.com
         port: 443
-        protocol: rest
         enforcement: enforce
       - host: objects.githubusercontent.com
         port: 443
-        protocol: rest
         enforcement: enforce
     binaries:
       - path: /usr/bin/git
@@ -106,16 +115,18 @@ network_policies:
       - host: api.github.com
         port: 443
         protocol: rest
+        access: read-only
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26
 
-  # ── Web search (DuckDuckGo) ───────────────────────────────────────────────────
+  # ── Web search (DuckDuckGo) ──────────────────────────────────────────────
   web-search:
     endpoints:
       - host: lite.duckduckgo.com
         port: 443
         protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       - path: /usr/bin/node-26

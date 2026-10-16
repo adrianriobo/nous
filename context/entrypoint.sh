@@ -19,6 +19,8 @@ _write_pi_creds() {
 }
 
 _check_auth() {
+    # Skip auth when using a mock/override endpoint (integration tests)
+    [[ -n "${VERTEX_API_BASE_URL:-}" ]] && return 0
     if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then return 0; fi
     local has_project="${GOOGLE_CLOUD_PROJECT:-}${ANTHROPIC_VERTEX_PROJECT_ID:-}"
     if [[ -n "${has_project}" ]]; then

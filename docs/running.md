@@ -1,4 +1,4 @@
-# Running haropz
+# Running nous
 
 ## Local — podman
 
@@ -9,7 +9,7 @@ podman run --rm -it \
   --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
   --env CLOUD_ML_REGION=us-east5 \
   -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
-  ghcr.io/aipcc/haropz:latest
+  ghcr.io/aipcc/nous:latest
 ```
 
 ### Pipe a task
@@ -20,7 +20,7 @@ echo 'your task here' | \
   --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
   --env CLOUD_ML_REGION=us-east5 \
   -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
-  ghcr.io/aipcc/haropz:latest
+  ghcr.io/aipcc/nous:latest
 ```
 
 ### Code review a GitHub PR
@@ -32,7 +32,7 @@ echo 'Review PR https://github.com/OWNER/REPO/pull/NNN' | \
   --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
   --env CLOUD_ML_REGION=us-east5 \
   -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
-  ghcr.io/aipcc/haropz:latest
+  ghcr.io/aipcc/nous:latest
 
 # Private repo — add a GitHub token
 echo 'Review PR https://github.com/OWNER/REPO/pull/NNN' | \
@@ -41,7 +41,7 @@ echo 'Review PR https://github.com/OWNER/REPO/pull/NNN' | \
   --env CLOUD_ML_REGION=us-east5 \
   --env GITHUB_TOKEN=<token> \
   -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
-  ghcr.io/aipcc/haropz:latest
+  ghcr.io/aipcc/nous:latest
 ```
 
 > Add `--storage-driver=vfs` when running inside a privileged container (CI, nested sandbox).
@@ -58,7 +58,7 @@ OpenShell enforces network policy at the kernel level. The agent can only reach 
 openshell settings set --global --key providers_v2_enabled --value true --yes
 
 openshell provider create \
-  --name vertex-haropz \
+  --name vertex-nous \
   --type google-vertex-ai \
   --from-gcloud-adc \
   --config VERTEX_AI_PROJECT_ID=<your-project> \
@@ -70,22 +70,22 @@ openshell provider create \
 ```bash
 # Interactive
 openshell sandbox create \
-  --from ghcr.io/aipcc/haropz:latest \
-  --provider vertex-haropz \
-  --policy ./security/haropz-policy.yaml
+  --from ghcr.io/aipcc/nous:latest \
+  --provider vertex-nous \
+  --policy ./security/nous-policy.yaml
 
 # With web search policy (DuckDuckGo allowed)
 openshell sandbox create \
-  --from ghcr.io/aipcc/haropz:latest \
-  --provider vertex-haropz \
-  --policy ./security/haropz-policy-websearch.yaml
+  --from ghcr.io/aipcc/nous:latest \
+  --provider vertex-nous \
+  --policy ./security/nous-policy-websearch.yaml
 
 # Pipe a task
 echo 'Review PR https://github.com/OWNER/REPO/pull/NNN' | \
   openshell sandbox create \
-  --from ghcr.io/aipcc/haropz:latest \
-  --provider vertex-haropz \
-  --policy ./security/haropz-policy.yaml \
+  --from ghcr.io/aipcc/nous:latest \
+  --provider vertex-nous \
+  --policy ./security/nous-policy.yaml \
   -- pi --print -
 ```
 
@@ -99,10 +99,10 @@ openshell sandbox connect my-sandbox
 openshell sandbox exec -n my-sandbox --tty -- /bin/bash
 
 # Update the network policy live
-openshell policy update my-sandbox --policy ./security/haropz-policy.yaml
+openshell policy update my-sandbox --policy ./security/nous-policy.yaml
 
 # Preview a policy change before applying
-openshell policy update my-sandbox --policy ./security/haropz-policy.yaml --dry-run
+openshell policy update my-sandbox --policy ./security/nous-policy.yaml --dry-run
 ```
 
 ---
