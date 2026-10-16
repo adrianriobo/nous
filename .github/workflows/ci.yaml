@@ -58,7 +58,7 @@ jobs:
 
       - name: Cache container-structure-test
         id: cst-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: container-structure-test-linux-amd64
           key: cst-v1.16.0
@@ -131,7 +131,7 @@ jobs:
 
       - name: Cache OpenShell
         id: openshell-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.local/bin/openshell
           key: openshell-linux-amd64-${{ env.OPENSHELL_VERSION }}
@@ -259,7 +259,7 @@ jobs:
 
       - name: Cache OpenShell
         id: openshell-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.local/bin/openshell
           key: openshell-linux-amd64-${{ env.OPENSHELL_VERSION }}
