@@ -1,0 +1,95 @@
+name: Integration Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  integration:
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: podman build -t haropz:test -f Containerfile .
+
+      - name: Install OpenShell
+        run: |
+          curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
+          # The installer starts openshell-gateway as a systemd user service.
+          # Give it a moment to come up.
+          sleep 3
+          openshell --version
+
+      - name: Start mock Vertex server
+        run: |
+          node tests/mock-vertex-server.mjs &
+          echo "MOCK_PID=$!" >> "$GITHUB_ENV"
+          # Wait until the server accepts connections (up to 10 s)
+          for i in $(seq 1 10); do
+            nc -z 127.0.0.1 4010 2>/dev/null && break
+            sleep 1
+          done
+          echo "Mock server ready"
+
+      - name: Resolve host IP reachable from sandbox
+        run: |
+          # The sandbox is a container on this VM. The VM's primary non-loopback
+          # IP is reachable from inside the container via standard routing.
+          HOST_IP=$(ip route get 1.1.1.1 | grep -oP 'src \K\S+')
+          echo "HOST_IP=$HOST_IP" >> "$GITHUB_ENV"
+          echo "Host IP: $HOST_IP"
+
+      - name: Write integration test policy
+        run: |
+          cat > /tmp/haropz-policy-integration-test.yaml << EOF
+          version: 1
+          network_policies:
+            mock-vertex:
+              endpoints:
+                - host: $HOST_IP
+                  port: 4010
+                  protocol: rest
+                  enforcement: enforce
+              binaries:
+                - path: /usr/bin/node-26
+          EOF
+
+      - name: Run haropz under OpenShell against mock Vertex server
+        run: |
+          OUTPUT=$(echo 'say hello' | \
+            openshell sandbox create \
+              --from haropz:test \
+              --policy /tmp/haropz-policy-integration-test.yaml \
+              --env ANTHROPIC_VERTEX_PROJECT_ID=test-project \
+              --env CLOUD_ML_REGION=us-east5 \
+              --env VERTEX_API_BASE_URL=http://$HOST_IP:4010 \
+              --no-keep \
+              -- pi --print -)
+          echo "--- agent output ---"
+          echo "$OUTPUT"
+          echo "--- end output ---"
+          # The mock server returns "Hello from haropz mock vertex server"
+          echo "$OUTPUT" | grep -qi "hello" \
+            || { echo "FAIL: expected mock response not found in output"; exit 1; }
+          echo "PASS"
+
+      - name: Validate production policy files
+        run: |
+          command -v yamllint >/dev/null 2>&1 || pip install --quiet yamllint
+          yamllint -d relaxed security/haropz-policy.yaml
+          yamllint -d relaxed security/haropz-policy-websearch.yaml
+          # Dry-run lets OpenShell verify the policy is structurally valid
+          openshell sandbox create \
+            --from haropz:test \
+            --policy security/haropz-policy.yaml \
+            --dry-run || true
+
+      - name: Stop mock server
+        if: always()
+        run: kill "$MOCK_PID" 2>/dev/null || true

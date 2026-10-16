@@ -1,0 +1,121 @@
+version: 1
+
+# OpenShell network policy for haropz with web search enabled.
+#
+# Extends haropz-policy.yaml by adding DuckDuckGo as an allowed endpoint.
+# Only use this policy when running a general-purpose session where internet
+# search is acceptable. Do NOT use for code review sessions involving
+# internal or confidential source code.
+#
+# Also set ALLOW_WEB_SEARCH=1 in the sandbox environment — the application-layer
+# egress guard in router.ts must be relaxed in addition to this platform policy.
+#
+# Apply:
+#   openshell sandbox create \
+#     --from quay.io/aipcc/haropz:latest \
+#     --provider vertex-haropz \
+#     --policy ./security/haropz-policy-websearch.yaml \
+#     --env ALLOW_WEB_SEARCH=1
+
+network_policies:
+
+  # ── Vertex AI inference ──────────────────────────────────────────────────────
+  vertex-ai-global:
+    endpoints:
+      - host: aiplatform.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  vertex-ai-us-east5:
+    endpoints:
+      - host: us-east5-aiplatform.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  vertex-ai-us-central1:
+    endpoints:
+      - host: us-central1-aiplatform.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  vertex-ai-europe-west1:
+    endpoints:
+      - host: europe-west1-aiplatform.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  vertex-ai-asia-southeast1:
+    endpoints:
+      - host: asia-southeast1-aiplatform.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  # ── Google auth / token refresh ───────────────────────────────────────────────
+  google-auth:
+    endpoints:
+      - host: oauth2.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+      - host: iamcredentials.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+      - host: accounts.google.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  # ── GitHub — git clone for PR code reviews ────────────────────────────────────
+  github-git:
+    endpoints:
+      - host: github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+      - host: codeload.github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+      - host: objects.githubusercontent.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/git
+
+  github-api:
+    endpoints:
+      - host: api.github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  # ── Web search (DuckDuckGo) ───────────────────────────────────────────────────
+  web-search:
+    endpoints:
+      - host: lite.duckduckgo.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26

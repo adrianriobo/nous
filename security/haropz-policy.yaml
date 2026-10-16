@@ -1,0 +1,122 @@
+version: 1
+
+# OpenShell network policy for haropz.
+#
+# OpenShell denies all outbound by default — every destination must be listed
+# explicitly. This policy allows only what haropz needs:
+#   - Vertex AI inference endpoints (per region)
+#   - Google auth / token refresh
+#   - GitHub (git clone for PR code reviews)
+#
+# Web search (DuckDuckGo) is intentionally excluded. See haropz-policy-websearch.yaml
+# to enable it when running a non-restricted session.
+#
+# Apply at sandbox creation:
+#   openshell sandbox create \
+#     --from quay.io/aipcc/haropz:latest \
+#     --provider vertex-haropz \
+#     --policy ./security/haropz-policy.yaml
+#
+# Update a running sandbox:
+#   openshell policy update my-sandbox --policy ./security/haropz-policy.yaml
+#
+# Dry-run (preview without applying):
+#   openshell policy update my-sandbox --policy ./security/haropz-policy.yaml --dry-run
+#
+# Binary paths were resolved inside the image with:
+#   readlink -f $(command -v node)  →  /usr/bin/node-26
+#   readlink -f $(command -v git)   →  /usr/bin/git
+
+network_policies:
+
+  # ── Vertex AI inference ──────────────────────────────────────────────────────
+  # Add or remove regions to match your CLOUD_ML_REGION setting.
+  vertex-ai-global:
+    endpoints:
+      - host: aiplatform.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  vertex-ai-us-east5:
+    endpoints:
+      - host: us-east5-aiplatform.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  vertex-ai-us-central1:
+    endpoints:
+      - host: us-central1-aiplatform.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  vertex-ai-europe-west1:
+    endpoints:
+      - host: europe-west1-aiplatform.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  vertex-ai-asia-southeast1:
+    endpoints:
+      - host: asia-southeast1-aiplatform.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  # ── Google auth / token refresh ───────────────────────────────────────────────
+  google-auth:
+    endpoints:
+      - host: oauth2.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+      - host: iamcredentials.googleapis.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+      - host: accounts.google.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  # ── GitHub — git clone for PR code reviews ────────────────────────────────────
+  github-git:
+    endpoints:
+      - host: github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+      - host: codeload.github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+      - host: objects.githubusercontent.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/git
+
+  github-api:
+    endpoints:
+      - host: api.github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26

@@ -1,0 +1,23 @@
+version: 1
+
+# OpenShell policy for CI integration tests.
+#
+# Allows only the mock Vertex server running on the GHA runner host.
+# The runner's primary IP is resolved at workflow runtime and substituted
+# into the policy — this file is NOT used directly; the workflow generates
+# a resolved copy at /tmp/haropz-policy-integration-test.yaml.
+#
+# See .github/workflows/integration.yaml for how the policy is written.
+#
+# Do NOT use this policy in production — it points to a local mock server,
+# not to real Vertex AI endpoints.
+
+network_policies:
+  mock-vertex:
+    endpoints:
+      - host: __RUNNER_HOST_IP__
+        port: 4010
+        protocol: rest
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26

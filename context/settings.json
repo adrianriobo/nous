@@ -1,0 +1,8 @@
+{
+  "packages": [
+    "npm:pi-provider-vertex-anthropic"
+  ],
+  "defaultProvider": "router",
+  "defaultModel": "auto",
+  "defaultThinkingLevel": "off"
+}

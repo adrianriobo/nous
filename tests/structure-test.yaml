@@ -1,0 +1,51 @@
+# Container structure tests for haropz
+# Run with: container-structure-test test --image <image> --config tests/structure-test.yaml
+
+schemaVersion: "2.0.0"
+
+metadataTest:
+  labels:
+    - key: "io.openshell.sandbox.harness"
+      value: "pi"
+  envVars:
+    - key: "AGENT_NAME"
+      value: "pi"
+  user: "1001"
+  workdir: "/sandbox"
+  entrypoint: ["/usr/local/bin/entrypoint.sh"]
+  cmd: []
+
+fileExistenceTests:
+  - name: "entrypoint executable"
+    path: "/usr/local/bin/entrypoint.sh"
+    shouldExist: true
+    permissions: "-rwxr-xr-x"
+
+  - name: "pi wrapper present"
+    path: "/usr/local/sbin/pi"
+    shouldExist: true
+
+  - name: "sandbox home directory"
+    path: "/sandbox"
+    shouldExist: true
+    isDirectory: true
+
+fileContentTests:
+  - name: "entrypoint handles interactive and passthrough modes"
+    path: "/usr/local/bin/entrypoint.sh"
+    expectedContents:
+      - "_check_auth"
+      - "exec pi"
+
+commandTests:
+  - name: "pi binary is on PATH"
+    command: "bash"
+    args: ["-c", "command -v pi"]
+    exitCode: 0
+
+  - name: "sandbox user is 1001"
+    command: "bash"
+    args: ["-c", "id -u"]
+    exitCode: 0
+    expectedOutput:
+      - "1001"

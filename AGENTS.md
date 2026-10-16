@@ -1,0 +1,195 @@
+# haropz — agent topology
+
+## Architecture
+
+haropz wraps [pi](https://github.com/earendil-works/pi) with a single TypeScript extension (`context/router.ts`) that provides:
+
+1. **Virtual model router** — registers a `router/auto` model that selects the right Claude tier per turn
+2. **`web_search` tool** — DuckDuckGo via fetch
+3. **`code_review` tool** — Alibaba open-code-review in delegate mode
+
+The provider (`pi-provider-vertex-anthropic`) is installed at image build time. `context/vertex-api-patch.ts` overlays the provider's `src/vertex-api.ts` to fix a bug where tools were never sent to the Vertex API (the provider read `context.tools` which pi never populates; the fix extracts tools from pi's system messages instead).
+
+```
+  user prompt
+      │
+      ▼
+  pi session
+      │  calls router/auto
+      ▼
+  router.ts → selects tier based on complexity + phase
+      │
+      ├─ simple / implement phase → claude-haiku-4-5  (or Gemini Flash if available)
+      ├─ complex / plan phase     → claude-sonnet-4-5
+      └─ retry / escalation       → claude-opus-4-6
+            │
+            ▼
+  pi-provider-vertex-anthropic  →  Vertex AI (googleapis.com)
+```
+
+## Router logic
+
+The router implements a two-phase strategy:
+
+| Phase | Trigger | Model |
+|---|---|---|
+| Plan | First turn of a new task | Haiku (simple) or Sonnet (complex) |
+| Implement | After any write/edit/bash tool call | Haiku or Gemini Flash |
+| Escalate | On retry | Next tier up |
+
+**Complexity detection** — a task is treated as complex if the last user message exceeds 80 words or matches keywords: `implement`, `build`, `create`, `refactor`, `architect`, `design`, `migrate`, `system`, `add feature`, `fix bug`.
+
+**Gemini Flash fallback** — the router checks for an available Gemini Flash model (2.0 or 1.5) as the cheapest option for simple and implement-phase turns.
+
+**Thinking levels** — if the user sets a thinking level explicitly (`low`/`medium`/`high`), the router maps it to a tier: low→Haiku, medium→Sonnet, high→Opus.
+
+## Models
+
+| Model | Provider | Tier | Use |
+|---|---|---|---|
+| `claude-haiku-4-5@20251001` | vertex-anthropic | 0 | Simple tasks, implement phase |
+| `claude-sonnet-4-5@20250929` | vertex-anthropic | 1 | Complex planning |
+| `claude-opus-4-6` | vertex-anthropic | 2 | Heavy reasoning, retries |
+| `gemini-2.0-flash-001` | google-vertex | — | Cheapest fallback (if available) |
+
+## Built-in tools
+
+### `web_search`
+
+Searches DuckDuckGo lite and returns ranked results with snippets. Always registered.
+
+### `code_review`
+
+Runs [Alibaba open-code-review](https://github.com/alibaba/open-code-review) (`ocr`) in delegate mode. `ocr` analyses the target files with its rule engine and outputs structured review guidance for pi to act on — no second LLM or API key required.
+
+Parameters:
+- `files` — array of file paths (optional; omit to let ocr auto-detect changed files in the git workspace)
+- `mode` — `"rule"` (default, full review) or `"preview"` (show selected files without reviewing)
+
+Typical flow for a GitHub PR review:
+1. pi uses `bash` to clone the repo and fetch the PR branch
+2. pi calls `code_review(mode: "preview")` to see which files ocr would select
+3. pi calls `code_review(files: [...])` to get rule-based review guidance
+4. pi reads the flagged files and produces structured findings
+
+## Egress security
+
+Egress is enforced exclusively at the OpenShell platform layer — kernel-level (Landlock LSM + seccomp), covering every process in the container (`node`, `bash`, `curl`, `git`, etc.).
+
+Policy files live in `security/`:
+
+| File | Purpose |
+|---|---|
+| `security/haropz-policy.yaml` | Production default — Vertex AI + GitHub |
+| `security/haropz-policy-websearch.yaml` | Adds DuckDuckGo |
+| `security/haropz-policy-integration-test.yaml` | Template for CI — IP substituted at runtime |
+
+Rules are scoped to specific binaries (`/usr/bin/node-26` for pi/ocr, `/usr/bin/git` for clone). Binary paths were resolved inside the image with `readlink -f $(command -v node)`.
+
+## CI / CD
+
+### Build & Publish (`build.yaml`)
+
+```
+push to main / v* tag
+        │
+        ▼
+  podman build
+        │
+        ▼
+  container-structure-test
+        │
+        ▼
+  podman push → ghcr.io/aipcc/haropz:{sha,latest,version}
+```
+
+Runs on `ubuntu-26.04`. Uses `GITHUB_TOKEN` (auto-provided) for GHCR access — no additional secrets.
+
+### Integration Test (`integration.yaml`)
+
+```
+  PR / push to main
+        │
+        ▼
+  podman build → haropz:test
+        │
+        ▼
+  install OpenShell (curl installer, systemd user service)
+        │
+        ▼
+  start mock-vertex-server.mjs on :4010
+        │  (emits Anthropic SSE stream, no real API key needed)
+        ▼
+  openshell sandbox create \
+    --from haropz:test \
+    --policy /tmp/haropz-policy-integration-test.yaml \
+    --env VERTEX_API_BASE_URL=http://<runner-ip>:4010 \
+    --no-keep \
+    -- pi --print -
+        │
+        ▼
+  assert output contains expected text
+        │
+        ▼
+  yamllint + openshell --dry-run on production policy files
+```
+
+Runs on `ubuntu-26.04` (kernel 7.0, Landlock ABI satisfied). No Vertex AI credentials required.
+
+**`VERTEX_API_BASE_URL` env var** — when set, `vertex-api-patch.ts` replaces the Vertex AI base URL and skips Google auth token fetch. Only use this in tests.
+
+## Running
+
+### Local podman
+
+```bash
+# Interactive
+podman run --rm -it \
+  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
+  --env CLOUD_ML_REGION=us-east5 \
+  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  ghcr.io/aipcc/haropz:latest
+
+# Pipe a task
+echo 'your task here' | \
+  podman run --rm -i \
+  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
+  --env CLOUD_ML_REGION=us-east5 \
+  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  ghcr.io/aipcc/haropz:latest
+```
+
+> Add `--storage-driver=vfs` when running inside a privileged container (CI, dev sandbox).
+
+### OpenShell
+
+```bash
+# Interactive
+openshell sandbox create \
+  --from ghcr.io/aipcc/haropz:latest \
+  --provider vertex-haropz \
+  --policy ./security/haropz-policy.yaml
+
+# Pipe a task
+echo 'Review PR https://github.com/OWNER/REPO/pull/NNN' | \
+  openshell sandbox create \
+  --from ghcr.io/aipcc/haropz:latest \
+  --provider vertex-haropz \
+  --policy ./security/haropz-policy.yaml \
+  -- pi --print -
+
+# Update policy on a running sandbox
+openshell policy update my-sandbox --policy ./security/haropz-policy.yaml
+
+# Dry-run before applying
+openshell policy update my-sandbox --policy ./security/haropz-policy.yaml --dry-run
+
+# Debug shell
+openshell sandbox exec -n my-sandbox --tty -- /bin/bash
+```
+
+### Integration test (local, no credentials)
+
+```bash
+make integration
+```
