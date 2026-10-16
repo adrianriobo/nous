@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=quay.io/aipcc/base-images/agentic/pi:1.0.0-1791226584
+ARG BASE_IMAGE=quay.io/aipcc/base-images/agentic/pi:1.1.0-1791981036
 
 FROM ${BASE_IMAGE}
 USER 0
