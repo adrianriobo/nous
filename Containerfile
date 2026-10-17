@@ -1,5 +1,5 @@
 # renovate: datasource=docker depName=quay.io/aipcc/base-images/agentic/pi
-ARG BASE_TAG=1.1.0-1791981036
+ARG BASE_TAG=1.2.0
 ARG BASE_IMAGE=quay.io/aipcc/base-images/agentic/pi:${BASE_TAG}
 
 FROM ${BASE_IMAGE}
@@ -11,7 +11,7 @@ ARG SUMMARY="Minimal pi harness with Vertex AI integration"
 # renovate: datasource=npm depName=pi-provider-vertex-anthropic
 ARG PI_PROVIDER_VERTEX_VERSION=0.1.3
 # renovate: datasource=npm depName=@alibaba-group/open-code-review
-ARG OPEN_CODE_REVIEW_VERSION=1.13.0
+ARG OPEN_CODE_REVIEW_VERSION=1.13.1
 
 LABEL io.openshell.sandbox.harness="pi" \
       io.openshell.harness.version="${VERSION}" \
