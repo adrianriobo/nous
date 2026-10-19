@@ -27,6 +27,7 @@ filesystem_policy:
   include_workdir: true
   read_only:
     - /opt/pi
+    - /run/secrets
 
 network_policies:
 

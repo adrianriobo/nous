@@ -31,7 +31,37 @@ _check_auth() {
     return 1
 }
 
+_inject_ca() {
+    local ca=/run/secrets/ca-bundle.crt
+    # NODE_EXTRA_CA_CERTS already set explicitly — honour it as-is
+    if [[ -n "${NODE_EXTRA_CA_CERTS:-}" ]]; then return 0; fi
+    if [[ -f "$ca" ]]; then export NODE_EXTRA_CA_CERTS="$ca"; fi
+}
+
+_inject_mcp() {
+    local mcp=/run/secrets/mcp.json
+    local target=/sandbox/.pi/agent/mcp.json
+    [[ -f "$mcp" ]] || return 0
+    node - <<'EOF' || { echo >&2 "ERROR: failed to inject MCP servers from ${mcp}"; exit 1; }
+const fs = require("fs");
+const srcPath    = "/run/secrets/mcp.json";
+const targetPath = "/sandbox/.pi/agent/mcp.json";
+
+const src      = JSON.parse(fs.readFileSync(srcPath, "utf8"));
+const incoming = src.mcpServers ?? src;
+
+let existing = {};
+try { existing = JSON.parse(fs.readFileSync(targetPath, "utf8")).mcpServers ?? {}; } catch {}
+
+const merged = { mcpServers: { ...existing, ...incoming } };
+fs.writeFileSync(targetPath, JSON.stringify(merged, null, 2));
+process.stderr.write("[nous] injected MCP servers: " + Object.keys(incoming).join(", ") + "\n");
+EOF
+}
+
 _check_auth
+_inject_ca
+_inject_mcp
 _write_pi_creds
 
 case "${1:-}" in
