@@ -16,15 +16,33 @@
 
 **Kernel-level egress control** — runs inside [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell), which enforces network policy at the kernel level. The agent can only reach what you explicitly allow.
 
+**Productization skills** — the `nous-productization` image extends the base image with [productization-skills](https://github.com/opendatahub-io/productization-skills): 18 pi-native skills for Jira, GitLab, Konflux, Google Workspace, Slack, and more, plus the tool CLIs they depend on (`gh`, `glab`, `jq`, `yq`, `kubectl`, `kustomize`, `tkn`, `uv`, …). All installed at build time — no runtime setup.
+
+## Image variants
+
+| Image | Tag | Contents |
+|---|---|---|
+| Base | `ghcr.io/aipcc/nous:latest` | Router, web search, code review |
+| Productization | `ghcr.io/aipcc/nous:productization-latest` | Base + 18 skills + tool CLIs |
+
+Both are built from the same `Containerfile` using named targets (`--target nous` / `--target nous-productization`).
+
 ## Quick start
 
 ```bash
-# Pull and run interactively
+# Base image — interactive
 podman run --rm -it \
   --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
   --env CLOUD_ML_REGION=us-east5 \
   -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
   ghcr.io/aipcc/nous:latest
+
+# Productization image — with Jira/GitLab/Konflux skills
+podman run --rm -it \
+  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
+  --env CLOUD_ML_REGION=us-east5 \
+  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  ghcr.io/aipcc/nous:productization-latest
 
 # Or pipe a task
 echo 'Review PR https://github.com/OWNER/REPO/pull/42' | \
