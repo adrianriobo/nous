@@ -46,6 +46,63 @@ nous needs two env vars and Google credentials:
 
 For credentials, mount your ADC file (shown above) or set `GOOGLE_APPLICATION_CREDENTIALS` to a service account JSON path.
 
+## Internal CA bundles
+
+If your MCP servers or internal services use a private CA, mount the bundle at startup:
+
+```bash
+-v /path/to/ca-bundle.crt:/run/secrets/ca-bundle.crt:z
+```
+
+nous exports `NODE_EXTRA_CA_CERTS` automatically so all Node.js traffic trusts the bundle — no root access required. If you set `NODE_EXTRA_CA_CERTS` in your env file, that value takes precedence.
+
+## External MCP servers
+
+Mount an `mcp.json` to inject additional MCP servers at startup:
+
+```bash
+-v /path/to/mcp.json:/run/secrets/mcp.json:z
+```
+
+The file follows the standard MCP format:
+
+```json
+{
+  "mcpServers": {
+    "my_server": {
+      "url": "https://my-mcp-server.example.com/mcp",
+      "headers": { "Authorization": "Bearer <token>" }
+    }
+  }
+}
+```
+
+At startup nous merges these entries into the agent's MCP config, calls `tools/list` on each HTTP server, and registers every discovered tool as a first-class pi function named `<serverName>_<toolName>`. The discovery runs before pi initialises so the tools appear in pi's `<functions>` block from the first turn — no image rebuild required, no codemode needed.
+
+Both MCP transport protocols are supported automatically:
+- **Streamable HTTP** (MCP spec 2025-03-26) — direct POST with session negotiation via `Mcp-Session-Id`
+- **HTTP+SSE** (MCP spec 2024-11-05) — GET-based SSE stream with a separate message endpoint
+
+### Routing
+
+nous reads the `instructions` field from each server's `initialize` response and prepends it to every tool description. pi uses this to prefer domain-specific tools over `web_search` without any extra configuration.
+
+To override or sharpen the routing signal, add a `hint` field alongside the server URL:
+
+```json
+{
+  "mcpServers": {
+    "my_server": {
+      "url": "https://my-mcp-server.example.com/mcp",
+      "headers": { "Authorization": "Bearer <token>" },
+      "hint": "Use for any questions about <your domain>"
+    }
+  }
+}
+```
+
+The `hint` takes precedence over the server's own `instructions`. No rebuild needed — change the mounted `mcp.json` and restart the container.
+
 ## Build your own
 
 ```bash
