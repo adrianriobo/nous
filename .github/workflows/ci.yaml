@@ -29,6 +29,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Cache podman's layer storage so unchanged stages (especially the
+      # skills-builder, which runs dnf + ~10 tool downloads) are skipped on
+      # subsequent runs.  The key is the Containerfile hash: a cache hit means
+      # every layer is already on disk and podman skips all network I/O.
+      # Restore-keys fall back to the most-recent entry when the file changes,
+      # so partial layer reuse still applies (e.g. only the last stage changed).
+      # Estimated cache size: ~1–2 GB (UBI9 + pi base image + built layers).
+      - name: Cache podman storage
+        uses: actions/cache@v6
+        with:
+          path: ~/.local/share/containers/storage
+          key: podman-${{ hashFiles('Containerfile') }}
+          restore-keys: podman-
+
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
         run: |
