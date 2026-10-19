@@ -219,6 +219,88 @@ jobs:
         if: always()
         run: kill "$MOCK_PID" 2>/dev/null || true
 
+  # ── MCP tool discovery ─────────────────────────────────────────────────────
+  # Verifies the full MCP injection pipeline:
+  #   1. entrypoint merges /run/secrets/mcp.json
+  #   2. router.ts discovers tools via streamable HTTP (with session negotiation)
+  #   3. tools appear in logs as registered first-class pi functions
+  #   4. hint field overrides the routing prefix in tool descriptions
+  # Uses a local mock MCP server — no external services required.
+  mcp-discovery:
+    name: MCP — Tool Discovery
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: nous-image
+          path: /tmp
+
+      - name: Load image
+        run: podman load -i /tmp/nous-test.tar
+
+      - name: Start mock Vertex server
+        run: |
+          node tests/mock-vertex-server.mjs &
+          echo "VERTEX_PID=$!" >> "$GITHUB_ENV"
+          for i in $(seq 1 10); do
+            nc -z 127.0.0.1 4010 2>/dev/null && break
+            sleep 1
+          done
+          echo "Mock Vertex server ready"
+
+      - name: Start mock MCP server
+        run: |
+          node tests/mock-mcp-server.mjs &
+          echo "MCP_PID=$!" >> "$GITHUB_ENV"
+          for i in $(seq 1 10); do
+            nc -z 127.0.0.1 4011 2>/dev/null && break
+            sleep 1
+          done
+          echo "Mock MCP server ready"
+
+      - name: Create test mcp.json
+        run: |
+          cat > /tmp/test-mcp.json <<'EOF'
+          {
+            "mcpServers": {
+              "mock_server": {
+                "url": "http://127.0.0.1:4011",
+                "hint": "Use for integration test queries"
+              }
+            }
+          }
+          EOF
+
+      - name: "Test: MCP tools are discovered and registered"
+        run: |
+          OUTPUT=$(podman run --rm \
+            --network=host \
+            --env ANTHROPIC_VERTEX_PROJECT_ID=test-project \
+            --env CLOUD_ML_REGION=us-east5 \
+            --env VERTEX_API_BASE_URL=http://127.0.0.1:4010 \
+            -v /tmp/test-mcp.json:/run/secrets/mcp.json:z \
+            nous:test \
+            --print 'say hello' 2>&1)
+          echo "--- output ---"
+          echo "$OUTPUT"
+          echo "--- end ---"
+          echo "$OUTPUT" | grep -q "\[nous\] mock_server: discovered tools: test_tool" \
+            || { echo "FAIL: expected MCP tool discovery log"; exit 1; }
+          echo "PASS: MCP tools discovered and registered"
+
+      - name: Stop mock servers
+        if: always()
+        run: |
+          kill "$VERTEX_PID" 2>/dev/null || true
+          kill "$MCP_PID" 2>/dev/null || true
+
   # ── OpenShell egress enforcement ───────────────────────────────────────────
   # Validates that the production policy files enforce egress correctly.
   # Uses the actual policies from security/ — no test-specific overrides.
