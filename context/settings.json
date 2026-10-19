@@ -4,5 +4,8 @@
   ],
   "defaultProvider": "router",
   "defaultModel": "auto",
-  "defaultThinkingLevel": "off"
+  "defaultThinkingLevel": "off",
+  "skills": [
+    "/sandbox/.pi/agent/productization-skills/productization-plugin/skills"
+  ]
 }

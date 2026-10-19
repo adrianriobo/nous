@@ -16,8 +16,9 @@ env:
 
 jobs:
   # ── Build ──────────────────────────────────────────────────────────────────
-  # Builds the image once, runs structure tests, uploads a tar artifact for
-  # all downstream test jobs, and pushes to GHCR on non-PR events.
+  # Builds both image targets (nous, nous-productization), runs structure tests
+  # on the base image, uploads two tar artifacts for downstream jobs, and pushes
+  # to GHCR on non-PR events.
   build:
     name: Build
     runs-on: ubuntu-26.04
@@ -37,21 +38,37 @@ jobs:
       - name: Set image tags
         id: tags
         run: |
-          SHA_TAG="${{ env.IMAGE }}:${{ github.sha }}"
-          LATEST_TAG="${{ env.IMAGE }}:latest"
+          SHA="${{ github.sha }}"
+          BASE="${{ env.IMAGE }}"
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             VERSION="${{ github.ref_name }}"
-            echo "tags=${SHA_TAG},${LATEST_TAG},${{ env.IMAGE }}:${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "base_tags=${BASE}:${SHA},${BASE}:latest,${BASE}:${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "prod_tags=${BASE}:productization-${SHA},${BASE}:productization-latest,${BASE}:productization-${VERSION}" >> "$GITHUB_OUTPUT"
           else
-            echo "tags=${SHA_TAG},${LATEST_TAG}" >> "$GITHUB_OUTPUT"
+            echo "base_tags=${BASE}:${SHA},${BASE}:latest" >> "$GITHUB_OUTPUT"
+            echo "prod_tags=${BASE}:productization-${SHA},${BASE}:productization-latest" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build image
+      - name: Build nous (base target)
         run: |
-          IFS=',' read -ra TAGS <<< "${{ steps.tags.outputs.tags }}"
+          IFS=',' read -ra TAGS <<< "${{ steps.tags.outputs.base_tags }}"
           TAG_ARGS=(-t nous:test)
           for t in "${TAGS[@]}"; do TAG_ARGS+=(-t "$t"); done
           podman build \
+            --target nous \
+            "${TAG_ARGS[@]}" \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -f Containerfile .
+
+      - name: Build nous-productization target
+        run: |
+          IFS=',' read -ra TAGS <<< "${{ steps.tags.outputs.prod_tags }}"
+          TAG_ARGS=(-t nous:productization-test)
+          for t in "${TAGS[@]}"; do TAG_ARGS+=(-t "$t"); done
+          podman build \
+            --target nous-productization \
             "${TAG_ARGS[@]}" \
             --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
             --label "org.opencontainers.image.revision=${{ github.sha }}" \
@@ -71,7 +88,7 @@ jobs:
           curl -fsSLO https://github.com/GoogleContainerTools/container-structure-test/releases/download/${{ env.CST_VERSION }}/container-structure-test-linux-amd64
           chmod +x container-structure-test-linux-amd64
 
-      - name: Run structure tests
+      - name: Run structure tests (base image)
         run: |
           chmod +x container-structure-test-linux-amd64
           podman system service -t 0 unix:///tmp/podman.sock &
@@ -81,21 +98,32 @@ jobs:
               --image nous:test \
               --config tests/structure-test.yaml
 
-      - name: Export image artifact
-        run: podman save nous:test -o /tmp/nous-test.tar
+      - name: Export image artifacts
+        run: |
+          podman save nous:test              -o /tmp/nous-test.tar
+          podman save nous:productization-test -o /tmp/nous-productization-test.tar
 
-      - name: Upload image artifact
+      - name: Upload base image artifact
         uses: actions/upload-artifact@v7
         with:
           name: nous-image
           path: /tmp/nous-test.tar
           retention-days: 1
 
-      - name: Push image
+      - name: Upload productization image artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: nous-productization-image
+          path: /tmp/nous-productization-test.tar
+          retention-days: 1
+
+      - name: Push images
         if: github.event_name != 'pull_request'
         run: |
-          IFS=',' read -ra TAGS <<< "${{ steps.tags.outputs.tags }}"
-          for t in "${TAGS[@]}"; do podman push "$t"; done
+          IFS=',' read -ra BASE_TAGS <<< "${{ steps.tags.outputs.base_tags }}"
+          for t in "${BASE_TAGS[@]}"; do podman push "$t"; done
+          IFS=',' read -ra PROD_TAGS <<< "${{ steps.tags.outputs.prod_tags }}"
+          for t in "${PROD_TAGS[@]}"; do podman push "$t"; done
 
   # ── Policy validation ──────────────────────────────────────────────────────
   # Creates a real sandbox with each production policy file to confirm OpenShell
@@ -300,6 +328,76 @@ jobs:
         run: |
           kill "$VERTEX_PID" 2>/dev/null || true
           kill "$MCP_PID" 2>/dev/null || true
+
+  # ── Productization skills smoke test ──────────────────────────────────────
+  # Verifies the nous-productization image ships the skills directory and tool
+  # binaries installed by the skills-builder stage.
+  skills-smoke:
+    name: Skills — Productization Image
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download productization image artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: nous-productization-image
+          path: /tmp
+
+      - name: Load image
+        run: podman load -i /tmp/nous-productization-test.tar
+
+      - name: "Test: skills directory is present and populated"
+        run: |
+          COUNT=$(podman run --rm --entrypoint /bin/bash \
+            nous:productization-test \
+            -c "ls /sandbox/.pi/agent/productization-skills/productization-plugin/skills/ | wc -l")
+          echo "Skill count: $COUNT"
+          [ "$COUNT" -ge 10 ] \
+            || { echo "FAIL: expected at least 10 skills, got $COUNT"; exit 1; }
+          echo "PASS: $COUNT skills present"
+
+      - name: "Test: tool binaries are installed"
+        run: |
+          MISSING=()
+          for bin in gh glab jq yq kubectl kustomize tkn uv; do
+            podman run --rm --entrypoint /bin/bash \
+              nous:productization-test \
+              -c "test -x /usr/local/bin/$bin" 2>/dev/null \
+              || MISSING+=("$bin")
+          done
+          if [ "${#MISSING[@]}" -gt 0 ]; then
+            echo "FAIL: missing binaries: ${MISSING[*]}"
+            exit 1
+          fi
+          echo "PASS: all expected tool binaries present"
+
+      - name: "Test: pi starts and reports skills path"
+        run: |
+          node tests/mock-vertex-server.mjs &
+          MOCK_PID=$!
+          for i in $(seq 1 10); do
+            nc -z 127.0.0.1 4010 2>/dev/null && break
+            sleep 1
+          done
+          OUTPUT=$(podman run --rm \
+            --network=host \
+            --env ANTHROPIC_VERTEX_PROJECT_ID=test-project \
+            --env CLOUD_ML_REGION=us-east5 \
+            --env VERTEX_API_BASE_URL=http://127.0.0.1:4010 \
+            nous:productization-test \
+            --print 'say hello' 2>&1) || true
+          kill "$MOCK_PID" 2>/dev/null || true
+          echo "--- output ---"
+          echo "$OUTPUT"
+          echo "--- end ---"
+          echo "$OUTPUT" | grep -qi "hello" \
+            || { echo "FAIL: productization image pi did not respond"; exit 1; }
+          echo "PASS: productization image pi started and responded"
 
   # ── OpenShell egress enforcement ───────────────────────────────────────────
   # Validates that the production policy files enforce egress correctly.
