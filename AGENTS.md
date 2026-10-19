@@ -1,12 +1,29 @@
 # nous — agent topology
 
+## Image targets
+
+The `Containerfile` defines two named targets built from the same source:
+
+| Target | Tag | Description |
+|---|---|---|
+| `nous` | `ghcr.io/aipcc/nous:latest` | Base pi harness — router, web search, code review |
+| `nous-productization` | `ghcr.io/aipcc/nous:productization-latest` | Extends `nous` with productization-skills and tool CLIs |
+
+```bash
+podman build --target nous              -t nous:latest .
+podman build --target nous-productization -t nous:productization .
+```
+
+The `nous-productization` target adds only one layer on top of `nous` (skills directory + binaries), so both share the same base cache and the productization build is fast.
+
 ## Architecture
 
-nous wraps [pi](https://github.com/earendil-works/pi) with a single TypeScript extension (`context/router.ts`) that provides:
+nous wraps [pi](https://github.com/earendil-works/pi) with a TypeScript extension (`context/router/`) that provides:
 
 1. **Virtual model router** — registers a `router/auto` model that selects the right Claude tier per turn
 2. **`web_search` tool** — DuckDuckGo via fetch
 3. **`code_review` tool** — Alibaba open-code-review in delegate mode
+4. **MCP tool injection** — discovers and registers tools from any HTTP MCP server at startup
 
 The provider (`pi-provider-vertex-anthropic`) is installed at image build time. `context/vertex-api-patch.ts` overlays the provider's `src/vertex-api.ts` to fix a bug where tools were never sent to the Vertex API (the provider read `context.tools` which pi never populates; the fix extracts tools from pi's system messages instead).
 
@@ -71,6 +88,52 @@ Typical flow for a GitHub PR review:
 2. pi calls `code_review(mode: "preview")` to see which files ocr would select
 3. pi calls `code_review(files: [...])` to get rule-based review guidance
 4. pi reads the flagged files and produces structured findings
+
+## Productization skills (`nous-productization`)
+
+The productization image bundles [opendatahub-io/productization-skills](https://github.com/opendatahub-io/productization-skills) as native pi skills. Skills are cloned at build time (pinned via the `SKILLS_REF` build-arg, default `main`) and registered via the `skills:` array in `context/settings.json`. pi discovers them automatically on startup — no runtime configuration needed.
+
+### Included skills
+
+| Skill | Domain |
+|---|---|
+| `jira-sprint-manager` | Jira sprint lifecycle |
+| `jira-release-setup` | Jira release management |
+| `jira-gap-audit` | Jira gap analysis |
+| `jira-utilities` | Jira helpers |
+| `jira-cve-tracker` | CVE tracking in Jira |
+| `gitlab-branch-manager` | GitLab branch ops |
+| `gitlab-code-review` | GitLab MR review |
+| `gitlab-job-analyzer` | GitLab CI job analysis |
+| `konflux-its-analyzer` | Konflux issue tracking |
+| `mapt-provisioner` | MAPT infrastructure |
+| `weekly-status` | Weekly status reports |
+| `slack-utilities` | Slack messaging |
+| `slack-webhook` | Slack webhooks |
+| `gws-calendar-reader` | Google Calendar |
+| `gws-drive-reader` | Google Drive |
+| `gws-slides-analyzer` | Google Slides |
+| `gws-doc-action-extractor` | Google Docs action items |
+| `aws-log-analyzer` | AWS log analysis |
+
+### Tool CLIs
+
+Installed by the skills-builder stage into `/usr/local/bin/`:
+
+`gh` · `glab` · `jq` · `yq` · `kubectl` · `kustomize` · `tkn` · `uv` · `uvx` · `gws` · `acli` · `kubectl-ka`
+
+Binary collection is resilient — installers run with `|| true` and only successfully-installed binaries are staged, so a failing installer never breaks the build.
+
+### Customising the skills ref
+
+To pin a specific tag or branch of productization-skills:
+
+```bash
+podman build \
+  --target nous-productization \
+  --build-arg SKILLS_REF=v1.2.0 \
+  -t nous:productization .
+```
 
 ## Egress security
 
