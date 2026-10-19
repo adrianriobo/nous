@@ -1,8 +1,31 @@
+# ── Global build args (must be before any FROM to be usable in FROM) ──────────
 # renovate: datasource=docker depName=quay.io/aipcc/base-images/agentic/pi
 ARG BASE_TAG=1.3.0
 ARG BASE_IMAGE=quay.io/aipcc/base-images/agentic/pi:${BASE_TAG}
+ARG SKILLS_REF=main
 
-FROM ${BASE_IMAGE}
+# ── Skills builder ────────────────────────────────────────────────────────────
+# Clones productization-skills and installs tool CLIs (gh, glab, kubectl, etc.)
+# in a fully-equipped UBI image; binaries are staged for the productization target.
+FROM registry.access.redhat.com/ubi9/ubi:latest AS skills-builder
+ARG SKILLS_REF
+RUN dnf install -y --allowerasing --setopt=install_weak_deps=False \
+      curl git tar gzip unzip python3 \
+    && git clone --depth=1 --branch="${SKILLS_REF}" \
+         https://github.com/opendatahub-io/productization-skills \
+         /productization-skills \
+    && bash -euc '\
+        src=/productization-skills/productization-plugin/tools; \
+        for f in "$src"/*/install.sh; do \
+          echo "[nous-build] installing: $(basename $(dirname $f))"; \
+          bash "$f" || true; \
+        done' \
+    && mkdir -p /opt/nous-tools \
+    && find /usr/local/bin -maxdepth 1 -type f -executable \
+         -exec cp -t /opt/nous-tools {} + 2>/dev/null || true
+
+# ── Base nous image ────────────────────────────────────────────────────────────
+FROM ${BASE_IMAGE} AS nous
 USER 0
 
 ARG VERSION=0.1.0
@@ -57,3 +80,14 @@ COPY --chown=1001:0 context/vertex-api-patch.ts /sandbox/.pi/agent/npm/node_modu
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD []
+
+# ── nous-productization: nous + productization-skills ─────────────────────────
+# Build with: podman build --target nous-productization -t nous:productization .
+FROM nous AS nous-productization
+USER 0
+# Copy skills repo (preserves tools/ sibling layout so relative paths in
+# SKILL.md remain valid) and all successfully-installed tool binaries.
+COPY --from=skills-builder /productization-skills /sandbox/.pi/agent/productization-skills
+COPY --from=skills-builder /opt/nous-tools/ /usr/local/bin/
+RUN chown -R 1001:0 /sandbox/.pi/agent/productization-skills
+USER 1001
