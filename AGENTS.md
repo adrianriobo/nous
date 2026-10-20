@@ -2,16 +2,23 @@
 
 ## Image targets
 
-The `Containerfile` defines two named targets built from the same source:
+The `Containerfile` defines two named targets published as **separate images**:
 
-| Target | Tag | Description |
-|---|---|---|
-| `nous` | `ghcr.io/aipcc/nous:latest` | Base pi harness — router, web search, code review |
-| `nous-productization` | `ghcr.io/aipcc/nous:productization-latest` | Extends `nous` with productization-skills and tool CLIs |
+| Target | Image | Tag scheme | Description |
+|---|---|---|---|
+| `nous` | `ghcr.io/aipcc/nous` | `latest` / `<sha>` / `<version>` | Base pi harness — router, web search, code review |
+| `nous-productization` | `ghcr.io/aipcc/nous-productization` | `<skills-ref>-<nous-version>` / `latest` | Extends `nous` with productization-skills and tool CLIs |
+
+The productization tag encodes both versioned inputs independently — e.g. `v1.2.0-v0.3.0` means productization-skills tag `v1.2.0` installed on top of nous `v0.3.0`.
 
 ```bash
 podman build --target nous              -t nous:latest .
-podman build --target nous-productization -t nous:productization .
+podman build --target nous-productization -t nous-productization:latest .
+
+# Pin a specific skills release
+podman build --target nous-productization \
+  --build-arg SKILLS_REF=v1.2.0 \
+  -t nous-productization:v1.2.0-v0.3.0 .
 ```
 
 The `nous-productization` target adds only one layer on top of `nous` (skills directory + binaries), so both share the same base cache and the productization build is fast.
@@ -132,7 +139,7 @@ To pin a specific tag or branch of productization-skills:
 podman build \
   --target nous-productization \
   --build-arg SKILLS_REF=v1.2.0 \
-  -t nous:productization .
+  -t nous-productization:v1.2.0-v0.3.0 .
 ```
 
 ## Egress security

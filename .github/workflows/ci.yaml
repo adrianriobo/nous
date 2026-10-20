@@ -9,6 +9,9 @@ on:
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/nous
+  # nous-productization is published as a separate image.
+  # Tags follow <skills-ref>-<nous-version> so both sides are independently traceable.
+  PRODUCTIZATION_IMAGE: ghcr.io/${{ github.repository_owner }}/nous-productization
   # renovate: datasource=github-releases depName=NVIDIA/OpenShell
   OPENSHELL_VERSION: "v0.1.4"
   # renovate: datasource=github-releases depName=GoogleContainerTools/container-structure-test
@@ -54,13 +57,20 @@ jobs:
         run: |
           SHA="${{ github.sha }}"
           BASE="${{ env.IMAGE }}"
+          PROD="${{ env.PRODUCTIZATION_IMAGE }}"
+          # Read SKILLS_REF from the Containerfile ARG so the tag stays in sync
+          # automatically when the default is bumped (e.g. by Renovate).
+          SKILLS_REF=$(grep '^ARG SKILLS_REF=' Containerfile | cut -d= -f2)
+          echo "skills_ref=${SKILLS_REF}" >> "$GITHUB_OUTPUT"
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             VERSION="${{ github.ref_name }}"
             echo "base_tags=${BASE}:${SHA},${BASE}:latest,${BASE}:${VERSION}" >> "$GITHUB_OUTPUT"
-            echo "prod_tags=${BASE}:productization-${SHA},${BASE}:productization-latest,${BASE}:productization-${VERSION}" >> "$GITHUB_OUTPUT"
+            # Productization tag: <skills-ref>-<nous-version> (e.g. v1.2.0-v0.3.0)
+            echo "prod_tags=${PROD}:${SKILLS_REF}-${VERSION},${PROD}:latest" >> "$GITHUB_OUTPUT"
           else
             echo "base_tags=${BASE}:${SHA},${BASE}:latest" >> "$GITHUB_OUTPUT"
-            echo "prod_tags=${BASE}:productization-${SHA},${BASE}:productization-latest" >> "$GITHUB_OUTPUT"
+            # On non-tag pushes: <skills-ref>-<sha> for full traceability
+            echo "prod_tags=${PROD}:${SKILLS_REF}-${SHA},${PROD}:latest" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build nous (base target)
@@ -83,6 +93,7 @@ jobs:
           for t in "${TAGS[@]}"; do TAG_ARGS+=(-t "$t"); done
           podman build \
             --target nous-productization \
+            --build-arg SKILLS_REF=${{ steps.tags.outputs.skills_ref }} \
             "${TAG_ARGS[@]}" \
             --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
             --label "org.opencontainers.image.revision=${{ github.sha }}" \
@@ -136,6 +147,7 @@ jobs:
         run: |
           IFS=',' read -ra BASE_TAGS <<< "${{ steps.tags.outputs.base_tags }}"
           for t in "${BASE_TAGS[@]}"; do podman push "$t"; done
+          # nous-productization is a separate image on GHCR
           IFS=',' read -ra PROD_TAGS <<< "${{ steps.tags.outputs.prod_tags }}"
           for t in "${PROD_TAGS[@]}"; do podman push "$t"; done
 
