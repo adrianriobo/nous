@@ -22,10 +22,10 @@
 
 | Image | Tag | Contents |
 |---|---|---|
-| Base | `ghcr.io/aipcc/nous:latest` | Router, web search, code review |
-| Productization | `ghcr.io/aipcc/nous:productization-latest` | Base + 18 skills + tool CLIs |
+| `ghcr.io/aipcc/nous` | `latest` / `<sha>` / `<version>` | Router, web search, code review |
+| `ghcr.io/aipcc/nous-productization` | `<skills-ref>-<nous-version>` / `latest` | Base + 18 skills + tool CLIs |
 
-Both are built from the same `Containerfile` using named targets (`--target nous` / `--target nous-productization`).
+Both are built from the same `Containerfile` using named targets (`--target nous` / `--target nous-productization`). The productization tag encodes both sides — e.g. `v1.2.0-v0.3.0` means skills tag `v1.2.0` on top of nous `v0.3.0`.
 
 ## Quick start
 
@@ -42,7 +42,7 @@ podman run --rm -it \
   --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
   --env CLOUD_ML_REGION=us-east5 \
   -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
-  ghcr.io/aipcc/nous:productization-latest
+  ghcr.io/aipcc/nous-productization:latest
 
 # Or pipe a task
 echo 'Review PR https://github.com/OWNER/REPO/pull/42' | \
