@@ -62,15 +62,16 @@ jobs:
           # automatically when the default is bumped (e.g. by Renovate).
           SKILLS_REF=$(grep '^ARG SKILLS_REF=' Containerfile | cut -d= -f2)
           echo "skills_ref=${SKILLS_REF}" >> "$GITHUB_OUTPUT"
+          # Strip leading 'v' from both sides for cleaner tags (e.g. 0.9.1-0.3.0)
+          SKILLS_VER="${SKILLS_REF#v}"
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             VERSION="${{ github.ref_name }}"
+            NOUS_VER="${VERSION#v}"
             echo "base_tags=${BASE}:${SHA},${BASE}:latest,${BASE}:${VERSION}" >> "$GITHUB_OUTPUT"
-            # Productization tag: <skills-ref>-<nous-version> (e.g. v1.2.0-v0.3.0)
-            echo "prod_tags=${PROD}:${SKILLS_REF}-${VERSION},${PROD}:latest" >> "$GITHUB_OUTPUT"
+            echo "prod_tags=${PROD}:${SKILLS_VER}-${NOUS_VER},${PROD}:latest" >> "$GITHUB_OUTPUT"
           else
             echo "base_tags=${BASE}:${SHA},${BASE}:latest" >> "$GITHUB_OUTPUT"
-            # On non-tag pushes: <skills-ref>-<sha> for full traceability
-            echo "prod_tags=${PROD}:${SKILLS_REF}-${SHA},${PROD}:latest" >> "$GITHUB_OUTPUT"
+            echo "prod_tags=${PROD}:${SKILLS_VER}-${SHA},${PROD}:latest" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build nous (base target)

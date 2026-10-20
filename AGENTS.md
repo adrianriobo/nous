@@ -17,8 +17,8 @@ podman build --target nous-productization -t nous-productization:latest .
 
 # Pin a specific skills release
 podman build --target nous-productization \
-  --build-arg SKILLS_REF=v1.2.0 \
-  -t nous-productization:v1.2.0-v0.3.0 .
+  --build-arg SKILLS_REF=v0.9.1 \
+  -t nous-productization:0.9.1-0.3.0 .
 ```
 
 The `nous-productization` target adds only one layer on top of `nous` (skills directory + binaries), so both share the same base cache and the productization build is fast.
@@ -138,8 +138,8 @@ To pin a specific tag or branch of productization-skills:
 ```bash
 podman build \
   --target nous-productization \
-  --build-arg SKILLS_REF=v1.2.0 \
-  -t nous-productization:v1.2.0-v0.3.0 .
+  --build-arg SKILLS_REF=v0.9.1 \
+  -t nous-productization:0.9.1-0.3.0 .
 ```
 
 ## Egress security

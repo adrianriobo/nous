@@ -25,7 +25,7 @@
 | `ghcr.io/aipcc/nous` | `latest` / `<sha>` / `<version>` | Router, web search, code review |
 | `ghcr.io/aipcc/nous-productization` | `<skills-ref>-<nous-version>` / `latest` | Base + 18 skills + tool CLIs |
 
-Both are built from the same `Containerfile` using named targets (`--target nous` / `--target nous-productization`). The productization tag encodes both sides — e.g. `v1.2.0-v0.3.0` means skills tag `v1.2.0` on top of nous `v0.3.0`.
+Both are built from the same `Containerfile` using named targets (`--target nous` / `--target nous-productization`). The productization tag encodes both sides — e.g. `0.9.1-0.3.0` means skills `v0.9.1` on top of nous `v0.3.0`. Renovate tracks the skills release and bumps `SKILLS_REF` automatically.
 
 ## Quick start
 
