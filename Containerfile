@@ -35,7 +35,7 @@ ARG SUMMARY="Minimal pi harness with Vertex AI integration"
 # renovate: datasource=npm depName=pi-provider-vertex-anthropic
 ARG PI_PROVIDER_VERTEX_VERSION=0.1.3
 # renovate: datasource=npm depName=@alibaba-group/open-code-review
-ARG OPEN_CODE_REVIEW_VERSION=1.13.1
+ARG OPEN_CODE_REVIEW_VERSION=1.13.2
 
 LABEL io.openshell.sandbox.harness="pi" \
       io.openshell.harness.version="${VERSION}" \
