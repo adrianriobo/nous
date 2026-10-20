@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { discoverTools, callMcpToolSSE, callMcpToolStreamable, type DiscoveryResult } from "./router/mcp";
 import { ddgSearch } from "./router/search";
-import { registerRouter } from "./router/model";
+import { discoverTiers, registerRouter } from "./router/model";
 
 export default async function (pi: ExtensionAPI) {
   // ── Code review tool (ocr delegate mode) ───────────────────────────────────
@@ -132,5 +132,8 @@ Use 'preview' mode first to see what files would be selected before doing the fu
   } as any);
 
   // ── Model router ────────────────────────────────────────────────────────────
-  registerRouter(pi);
+  // Probe Vertex AI at boot to build live tiers from confirmed-available models.
+  // Falls back to hardcoded defaults if credentials or network are unavailable.
+  const tiers = await discoverTiers();
+  registerRouter(pi, tiers);
 }
