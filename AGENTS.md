@@ -41,15 +41,31 @@ The provider (`pi-provider-vertex-anthropic`) is installed at image build time. 
   pi session
       │  calls router/auto
       ▼
+  discoverTiers() → probes Vertex AI at boot → live tier list
+      │
+      ▼
   router.ts → selects tier based on complexity + phase
       │
-      ├─ simple / implement phase → claude-haiku-4-5  (or Gemini Flash if available)
-      ├─ complex / plan phase     → claude-sonnet-4-5
-      └─ retry / escalation       → claude-opus-4-6
+      ├─ trivial / implement phase → claude-haiku-4-5  (or Gemini Flash if available)
+      ├─ plan phase (default)      → claude-opus-4-6
+      └─ retry / escalation        → step up one tier (haiku → sonnet → opus)
             │
             ▼
   pi-provider-vertex-anthropic  →  Vertex AI (googleapis.com)
 ```
+
+## Boot-time model discovery
+
+At startup, `discoverTiers()` probes every model in `VERTEX_CANDIDATES` in parallel using your ADC credentials. Any model that responds (even with an auth or quota error — anything other than 404) is considered available and added to the tier list. The list is sorted cheapest → most-capable so the router can step through tiers on retry.
+
+If credentials are unavailable or the probe times out, the router falls back to `FALLBACK_TIERS` (Haiku → Sonnet → Opus 4.6).
+
+Boot log example:
+```
+[nous] router: discovered tiers — [0]claude-haiku-4-5@20251001, [1]claude-sonnet-4-5@20250929, [2]claude-opus-4-6
+```
+
+To add a new candidate model, add it to `VERTEX_CANDIDATES` in `context/router/model.ts` (most-capable first). It will be probed automatically on next boot.
 
 ## Router logic
 
@@ -61,9 +77,9 @@ The router implements a two-phase strategy:
 | Implement | After any write/edit/bash tool call | Haiku or Gemini Flash |
 | Escalate | On retry | Haiku → Sonnet → Opus 4.6 |
 
-**Default is Opus 4.6** ($5/1M input — best available on Vertex AI). Haiku is used only when a query is *trivially simple*: fewer than 20 words AND contains no technical keywords (`code`, `function`, `error`, `debug`, `explain`, `analyze`, `review`, `deploy`, `build`, …). Everything else — including short technical questions — goes to Sonnet.
+**Default is Opus 4.6** ($5/1M input — best available on Vertex AI). Haiku is used only when a query is *trivially simple*: fewer than 20 words AND contains no technical keywords (`code`, `function`, `error`, `debug`, `explain`, `analyze`, `review`, `deploy`, `build`, …). Everything else — including short technical questions — goes to Opus 4.6.
 
-**Implement phase** — once any write/edit/bash tool call appears in the message history, the router switches to Haiku (or Gemini Flash if available) for mechanical implementation turns. If the user then asks something complex mid-session, the plan-phase logic re-evaluates and can upgrade back to Sonnet.
+**Implement phase** — once any write/edit/bash tool call appears in the message history, the router switches to Haiku (or Gemini Flash if available) for mechanical implementation turns. If the user then asks something complex mid-session, the plan-phase logic re-evaluates and upgrades back to Opus 4.6.
 
 **Retry escalation** — on each retry the router steps up one tier: Haiku → Sonnet → Opus.
 
@@ -81,6 +97,14 @@ The router implements a two-phase strategy:
 | `gemini-2.0-flash-001` | google-vertex | — | — | Cheapest fallback for implement phase (if available) |
 
 Opus 4.6 is both the highest quality and most cost-effective premium model available on Vertex AI via `pi-provider-vertex-anthropic`. When Claude 5 models appear on Vertex, bump `PI_PROVIDER_VERTEX_VERSION` in the Containerfile and update this table.
+
+## Token compression (rtk-oss)
+
+nous bundles [rtk-oss](https://github.com/rtk-ai/rtk) (Apache-2.0), a Rust binary that compresses shell command output before pi reads it — typically 60–90% token reduction on large command outputs.
+
+At build time, `rtk init --agent pi --global --auto-patch` creates `/sandbox/.pi/agent/extensions/rtk.ts`. Pi auto-discovers it on startup — no runtime configuration needed. The extension hooks into every `bash` tool call and pipes stdout/stderr through rtk's compressor before the token count is measured.
+
+`RTK_VERSION` is tracked by Renovate and pinned to a specific release.
 
 ## Built-in tools
 
