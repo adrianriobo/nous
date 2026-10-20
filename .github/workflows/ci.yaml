@@ -13,7 +13,7 @@ env:
   # Tags follow <skills-ref>-<nous-version> so both sides are independently traceable.
   PRODUCTIZATION_IMAGE: ghcr.io/${{ github.repository_owner }}/nous-productization
   # renovate: datasource=github-releases depName=NVIDIA/OpenShell
-  OPENSHELL_VERSION: "v0.1.4"
+  OPENSHELL_VERSION: "v0.1.5"
   # renovate: datasource=github-releases depName=GoogleContainerTools/container-structure-test
   CST_VERSION: "v1.22.1"
 
