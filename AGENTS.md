@@ -57,24 +57,30 @@ The router implements a two-phase strategy:
 
 | Phase | Trigger | Model |
 |---|---|---|
-| Plan | First turn of a new task | Haiku (simple) or Sonnet (complex) |
+| Plan | All new turns and continuations | Opus 4.6 (default) or Haiku (trivial only) |
 | Implement | After any write/edit/bash tool call | Haiku or Gemini Flash |
-| Escalate | On retry | Next tier up |
+| Escalate | On retry | Haiku → Sonnet → Opus 4.6 |
 
-**Complexity detection** — a task is treated as complex if the last user message exceeds 80 words or matches keywords: `implement`, `build`, `create`, `refactor`, `architect`, `design`, `migrate`, `system`, `add feature`, `fix bug`.
+**Default is Opus 4.6** ($5/1M input — best available on Vertex AI). Haiku is used only when a query is *trivially simple*: fewer than 20 words AND contains no technical keywords (`code`, `function`, `error`, `debug`, `explain`, `analyze`, `review`, `deploy`, `build`, …). Everything else — including short technical questions — goes to Sonnet.
 
-**Gemini Flash fallback** — the router checks for an available Gemini Flash model (2.0 or 1.5) as the cheapest option for simple and implement-phase turns.
+**Implement phase** — once any write/edit/bash tool call appears in the message history, the router switches to Haiku (or Gemini Flash if available) for mechanical implementation turns. If the user then asks something complex mid-session, the plan-phase logic re-evaluates and can upgrade back to Sonnet.
 
-**Thinking levels** — if the user sets a thinking level explicitly (`low`/`medium`/`high`), the router maps it to a tier: low→Haiku, medium→Sonnet, high→Opus.
+**Retry escalation** — on each retry the router steps up one tier: Haiku → Sonnet → Opus.
+
+**Gemini Flash** — when a Gemini Flash model is registered (2.0 or 1.5 variants), it is preferred over Haiku for cheap turns.
+
+**Thinking levels** — explicit `low`/`medium`/`high` settings map to Haiku/Sonnet/Opus regardless of complexity detection. `off` (the default) lets the router decide.
 
 ## Models
 
-| Model | Provider | Tier | Use |
-|---|---|---|---|
-| `claude-haiku-4-5@20251001` | vertex-anthropic | 0 | Simple tasks, implement phase |
-| `claude-sonnet-4-5@20250929` | vertex-anthropic | 1 | Complex planning |
-| `claude-opus-4-6` | vertex-anthropic | 2 | Heavy reasoning, retries |
-| `gemini-2.0-flash-001` | google-vertex | — | Cheapest fallback (if available) |
+| Model | Provider | Tier | Cost (input/1M) | Use |
+|---|---|---|---|---|
+| `claude-haiku-4-5@20251001` | vertex-anthropic | 0 | $1 | Trivial queries, implement phase |
+| `claude-sonnet-4-5@20250929` | vertex-anthropic | 1 | $3 | Retry escalation intermediate |
+| `claude-opus-4-6` | vertex-anthropic | 2 | $5 | **Default plan phase** |
+| `gemini-2.0-flash-001` | google-vertex | — | — | Cheapest fallback for implement phase (if available) |
+
+Opus 4.6 is both the highest quality and most cost-effective premium model available on Vertex AI via `pi-provider-vertex-anthropic`. When Claude 5 models appear on Vertex, bump `PI_PROVIDER_VERTEX_VERSION` in the Containerfile and update this table.
 
 ## Built-in tools
 
