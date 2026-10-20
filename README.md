@@ -8,11 +8,13 @@
 
 ## What you get
 
-**Smart model routing** — automatically picks the right Claude model for each task. Simple questions go to Haiku, complex plans to Sonnet, deep reasoning to Opus. No configuration needed.
+**Smart model routing** — automatically picks the right Claude model for each task. Default is Opus 4.6 for all plan-phase turns; Haiku for trivial queries and mechanical implementation. Available models are self-discovered from your Vertex AI project at boot — no configuration needed.
 
 **Web search** — DuckDuckGo search built in. The agent searches the web when it needs current information without you having to ask.
 
 **AI code review** — powered by [Alibaba open-code-review](https://github.com/alibaba/open-code-review). Point it at a GitHub PR and it gives you structured, rule-based feedback.
+
+**Token compression** — [rtk-oss](https://github.com/rtk-ai/rtk) (Apache-2.0) compresses bash tool output before pi reads it, cutting 60–90% of tokens on large command outputs. Installed and registered automatically at build time.
 
 **Kernel-level egress control** — runs inside [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell), which enforces network policy at the kernel level. The agent can only reach what you explicitly allow.
 

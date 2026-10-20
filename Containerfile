@@ -4,6 +4,8 @@ ARG BASE_TAG=1.3.0
 ARG BASE_IMAGE=quay.io/aipcc/base-images/agentic/pi:${BASE_TAG}
 # renovate: datasource=github-releases depName=opendatahub-io/productization-skills
 ARG SKILLS_REF=v0.9.1
+# renovate: datasource=github-releases depName=rtk-ai/rtk
+ARG RTK_VERSION=v1.0.1
 
 # ── Skills builder ────────────────────────────────────────────────────────────
 # Clones productization-skills and installs tool CLIs (gh, glab, kubectl, etc.)
@@ -24,6 +26,16 @@ RUN dnf install -y --allowerasing --setopt=install_weak_deps=False \
     && mkdir -p /opt/nous-tools \
     && find /usr/local/bin -maxdepth 1 -type f -executable \
          -exec cp -t /opt/nous-tools {} + 2>/dev/null || true
+
+# ── RTK builder ───────────────────────────────────────────────────────────────
+# Downloads the rtk-oss static binary from GitHub releases. UBI has curl;
+# the pi base image does not — so we stage the binary here and COPY it in.
+FROM registry.access.redhat.com/ubi9/ubi:latest AS rtk-builder
+ARG RTK_VERSION
+RUN mkdir -p /tmp/rtk-install \
+    && curl -fsSL "https://github.com/rtk-ai/rtk/releases/download/${RTK_VERSION}/rtk-oss-x86_64-unknown-linux-musl.tar.gz" \
+       | tar -xzf - -C /tmp/rtk-install \
+    && find /tmp/rtk-install -name 'rtk' -type f -exec install -m 755 {} /usr/local/bin/rtk \;
 
 # ── Base nous image ────────────────────────────────────────────────────────────
 FROM ${BASE_IMAGE} AS nous
@@ -59,10 +71,13 @@ RUN bundle=$(find /opt/pi -name 'cli.js' -path '*/bundle/cli.js' 2>/dev/null | h
 COPY context/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Install pi provider and tools, fix sandbox ownership.
+COPY --from=rtk-builder /usr/local/bin/rtk /usr/local/bin/rtk
+
+# Install pi provider and tools, register rtk extension, fix sandbox ownership.
 RUN mkdir -p /sandbox/.pi/agent/extensions \
     && HOME=/sandbox pi install npm:pi-provider-vertex-anthropic@${PI_PROVIDER_VERTEX_VERSION} \
     && npm install -g --allow-scripts=@alibaba-group/open-code-review @alibaba-group/open-code-review@${OPEN_CODE_REVIEW_VERSION} \
+    && HOME=/sandbox rtk init --agent pi --global --auto-patch \
     && chown -R 1001:0 /sandbox
 
 USER 1001
