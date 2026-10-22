@@ -105,5 +105,17 @@ USER 0
 # SKILL.md remain valid) and all successfully-installed tool binaries.
 COPY --from=skills-builder /productization-skills /sandbox/.pi/agent/productization-skills
 COPY --from=skills-builder /opt/nous-tools/ /usr/local/bin/
-RUN chown -R 1001:0 /sandbox/.pi/agent/productization-skills
+# The pi base image (Hummingbird OS) has no package manager.
+# uv (copied above) can manage a self-contained Python installation.
+# UV_PYTHON_INSTALL_DIR puts it in /opt so it survives across layers and is
+# readable by user 1001.
+RUN UV_PYTHON_INSTALL_DIR=/opt/uv-python uv python install 3.12 \
+    && PYTHON_BIN=$(UV_PYTHON_INSTALL_DIR=/opt/uv-python uv python find 3.12) \
+    && find /opt/uv-python -name EXTERNALLY-MANAGED -delete \
+    && ln -sf "$PYTHON_BIN" /usr/local/bin/python3 \
+    && ln -sf "$PYTHON_BIN" /usr/local/bin/python \
+    && "$PYTHON_BIN" -m ensurepip --upgrade \
+    && ln -sf "$(dirname "$PYTHON_BIN")/pip3" /usr/local/bin/pip3 \
+    && chmod -R a+rX /opt/uv-python \
+    && chown -R 1001:0 /sandbox/.pi/agent/productization-skills
 USER 1001
