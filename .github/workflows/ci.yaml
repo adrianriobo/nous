@@ -517,3 +517,108 @@ jobs:
             exit 1
           fi
           echo "PASS: DuckDuckGo blocked — base policy excludes it"
+
+  # ── Wiki integration test ──────────────────────────────────────────────────
+  # Mounts the fixture wiki and verifies:
+  #   1. wiki tools are registered at boot (log line present)
+  #   2. wiki_search executes and returns a result (via wiki_search scenario)
+  #   3. wiki_ingest creates a file in raw/assets/
+  wiki-integration:
+    name: Wiki — OKF 2.0 Integration
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: nous-image
+          path: /tmp
+
+      - name: Load image
+        run: podman load -i /tmp/nous-test.tar
+
+      - name: Start mock Vertex server (wiki_search scenario)
+        run: |
+          MOCK_SCENARIO=wiki_search node tests/mock-vertex-server.mjs &
+          echo "MOCK_PID=$!" >> "$GITHUB_ENV"
+          for i in $(seq 1 10); do
+            nc -z 127.0.0.1 4010 2>/dev/null && break
+            sleep 1
+          done
+          echo "Mock server ready"
+
+      - name: "Test: wiki tools registered at boot"
+        run: |
+          OUTPUT=$(podman run --rm \
+            --network=host \
+            --env ANTHROPIC_VERTEX_PROJECT_ID=test-project \
+            --env CLOUD_ML_REGION=us-east5 \
+            --env VERTEX_API_BASE_URL=http://127.0.0.1:4010 \
+            -v "${{ github.workspace }}/tests/fixtures/wiki:/sandbox/wiki:z" \
+            nous:test \
+            --print 'look up nous in the wiki' 2>&1)
+          echo "--- output ---"
+          echo "$OUTPUT"
+          echo "--- end ---"
+          echo "$OUTPUT" | grep -q "\[nous\] wiki: found at /sandbox/wiki" \
+            || { echo "FAIL: expected wiki registration log"; exit 1; }
+          echo "PASS: wiki tools registered"
+
+      - name: "Test: wiki_search executes and returns results"
+        run: |
+          OUTPUT=$(podman run --rm \
+            --network=host \
+            --env ANTHROPIC_VERTEX_PROJECT_ID=test-project \
+            --env CLOUD_ML_REGION=us-east5 \
+            --env VERTEX_API_BASE_URL=http://127.0.0.1:4010 \
+            -v "${{ github.workspace }}/tests/fixtures/wiki:/sandbox/wiki:z" \
+            nous:test \
+            --print 'look up nous in the wiki' 2>&1)
+          echo "$OUTPUT" | grep -qi "wiki lookup complete" \
+            || { echo "FAIL: wiki_search did not complete the round-trip"; exit 1; }
+          echo "PASS: wiki_search round-trip succeeded"
+
+      - name: "Test: wiki_ingest writes to raw/assets/"
+        run: |
+          # Restart mock server with wiki_ingest scenario so pi calls that tool.
+          kill "$MOCK_PID" 2>/dev/null || true
+          MOCK_SCENARIO=wiki_ingest node tests/mock-vertex-server.mjs &
+          echo "MOCK_PID=$!" >> "$GITHUB_ENV"
+          for i in $(seq 1 10); do nc -z 127.0.0.1 4010 2>/dev/null && break; sleep 1; done
+          WIKI_DIR=$(mktemp -d)
+          mkdir -p "$WIKI_DIR/raw/assets"
+          chmod 777 "$WIKI_DIR" "$WIKI_DIR/raw" "$WIKI_DIR/raw/assets"
+          podman run --rm \
+            --network=host \
+            --env ANTHROPIC_VERTEX_PROJECT_ID=test-project \
+            --env CLOUD_ML_REGION=us-east5 \
+            --env VERTEX_API_BASE_URL=http://127.0.0.1:4010 \
+            -v "$WIKI_DIR:/sandbox/wiki:z" \
+            nous:test \
+            --print 'ingest some content' 2>&1 || true
+          ls "$WIKI_DIR/raw/assets/" | grep -q "." \
+            || { echo "FAIL: no file created in raw/assets/"; exit 1; }
+          echo "PASS: file created in raw/assets/"
+          rm -rf "$WIKI_DIR"
+
+      - name: "Test: no wiki tools when not mounted"
+        run: |
+          OUTPUT=$(podman run --rm \
+            --network=host \
+            --env ANTHROPIC_VERTEX_PROJECT_ID=test-project \
+            --env CLOUD_ML_REGION=us-east5 \
+            --env VERTEX_API_BASE_URL=http://127.0.0.1:4010 \
+            nous:test \
+            --print 'hello' 2>&1)
+          echo "$OUTPUT" | grep -q "\[nous\] wiki: not mounted" \
+            || { echo "FAIL: expected wiki not-mounted log"; exit 1; }
+          echo "PASS: wiki tools correctly skipped when not mounted"
+
+      - name: Stop mock server
+        if: always()
+        run: kill "$MOCK_PID" 2>/dev/null || true

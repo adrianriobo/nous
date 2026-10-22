@@ -98,6 +98,40 @@ The router implements a two-phase strategy:
 
 Opus 4.6 is both the highest quality and most cost-effective premium model available on Vertex AI via `pi-provider-vertex-anthropic`. When Claude 5 models appear on Vertex, bump `PI_PROVIDER_VERTEX_VERSION` in the Containerfile and update this table.
 
+## Personal knowledge wiki (OKF 2.0)
+
+When `/sandbox/wiki` exists (or `WIKI_PATH` env var points elsewhere), three tools are registered at startup:
+
+| Tool | Description |
+|---|---|
+| `wiki_search` | Recursive scan of all `.md` files outside `raw/`. Scores by title (×10), description (×5), tags (×3), body (×1). Returns top-N results with path, type, description, and a body excerpt. |
+| `wiki_read` | Reads a full page by relative path. `.md` extension optional. Path-traversal guarded. |
+| `wiki_ingest` | Writes new content to `raw/assets/` with filename sanitisation. The processor agent picks it up on its next ingest run. |
+
+**Wiki format**: [OKF 2.0](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) — markdown files with YAML frontmatter (`type`, `title`, `description`, `tags`, `resource`, `sources`). The wiki follows the [LLM-wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f):
+
+```
+/sandbox/wiki/
+  index.md           # Catalog — wiki_search reads this first
+  log.md             # Chronological ingest history
+  <concept>.md       # OKF concept pages
+  <subdir>/          # Organized concept groups
+  raw/               # Immutable source documents (nous reads, never writes)
+    assets/          # Drop new content here via wiki_ingest
+```
+
+**Boot log** (wiki present):
+```
+[nous] wiki: found at /sandbox/wiki — registering wiki_search, wiki_read, wiki_ingest
+```
+
+**Boot log** (not mounted):
+```
+[nous] wiki: not mounted (/sandbox/wiki not found) — wiki tools skipped
+```
+
+The wiki tools are no-op when the directory is absent — no configuration needed to opt out.
+
 ## Token compression (rtk-oss)
 
 nous bundles [rtk-oss](https://github.com/rtk-ai/rtk) (Apache-2.0), a Rust binary that compresses shell command output before pi reads it — typically 60–90% token reduction on large command outputs.
@@ -105,6 +139,49 @@ nous bundles [rtk-oss](https://github.com/rtk-ai/rtk) (Apache-2.0), a Rust binar
 At build time, `rtk init --agent pi --global --auto-patch` creates `/sandbox/.pi/agent/extensions/rtk.ts`. Pi auto-discovers it on startup — no runtime configuration needed. The extension hooks into every `bash` tool call and pipes stdout/stderr through rtk's compressor before the token count is measured.
 
 `RTK_VERSION` is tracked by Renovate and pinned to a specific release.
+
+## LLM wiki integration
+
+nous supports mounting an [OKF-format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) knowledge wiki built from an Obsidian vault (following the [llm-wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)).
+
+Mount your processed wiki at `/sandbox/wiki` (or override with `WIKI_PATH`). Three tools are registered automatically at startup:
+
+| Tool | Description |
+|---|---|
+| `wiki_search` | Full-text search over all `.md` files in the wiki — returns matching pages with excerpts |
+| `wiki_read` | Read a specific wiki page by its relative path |
+| `wiki_ingest` | Write a file to `raw/assets/` for the processor agent to incorporate on its next run |
+
+The tools are silently skipped if the wiki is not mounted — no configuration required to disable them.
+
+### Directory layout expected
+
+```
+/sandbox/wiki/
+  index.md          ← entry point listing all pages with summaries
+  log.md            ← optional update history
+  <concept>.md      ← OKF knowledge units (type, title, description, tags frontmatter)
+  <subdir>/
+    index.md
+    <concept>.md
+  raw/
+    assets/         ← drop zone for new source material (wiki_ingest writes here)
+```
+
+### Mounting
+
+```bash
+podman run --rm -it \
+  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
+  --env CLOUD_ML_REGION=us-east5 \
+  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  -v /path/to/your/vault:/sandbox/wiki:z \
+  ghcr.io/aipcc/nous:latest
+```
+
+### Search behaviour
+
+`wiki_search` does a case-insensitive substring scan over all `.md` files in the wiki tree. It extracts the `title` frontmatter field (or first `#` heading) and returns a 300-character excerpt centred on the first match. For large wikis, prefer specific queries — the tool stops after `max_results` (default 5, max 20) matches.
 
 ## Built-in tools
 

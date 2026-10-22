@@ -90,6 +90,7 @@ COPY --chown=1001:0 context/router/index.ts /sandbox/.pi/agent/extensions/router
 COPY --chown=1001:0 context/router/mcp.ts   /sandbox/.pi/agent/extensions/router/mcp.ts
 COPY --chown=1001:0 context/router/search.ts /sandbox/.pi/agent/extensions/router/search.ts
 COPY --chown=1001:0 context/router/model.ts  /sandbox/.pi/agent/extensions/router/model.ts
+COPY --chown=1001:0 context/router/wiki.ts   /sandbox/.pi/agent/extensions/router/wiki.ts
 COPY --chown=1001:0 context/settings.json /sandbox/.pi/agent/settings.json
 # Also overlay the patched TS source (used if pi loads providers via jiti).
 COPY --chown=1001:0 context/vertex-api-patch.ts /sandbox/.pi/agent/npm/node_modules/pi-provider-vertex-anthropic/src/vertex-api.ts
