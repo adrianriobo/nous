@@ -140,49 +140,6 @@ At build time, `rtk init --agent pi --global --auto-patch` creates `/sandbox/.pi
 
 `RTK_VERSION` is tracked by Renovate and pinned to a specific release.
 
-## LLM wiki integration
-
-nous supports mounting an [OKF-format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) knowledge wiki built from an Obsidian vault (following the [llm-wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)).
-
-Mount your processed wiki at `/sandbox/wiki` (or override with `WIKI_PATH`). Three tools are registered automatically at startup:
-
-| Tool | Description |
-|---|---|
-| `wiki_search` | Full-text search over all `.md` files in the wiki — returns matching pages with excerpts |
-| `wiki_read` | Read a specific wiki page by its relative path |
-| `wiki_ingest` | Write a file to `raw/assets/` for the processor agent to incorporate on its next run |
-
-The tools are silently skipped if the wiki is not mounted — no configuration required to disable them.
-
-### Directory layout expected
-
-```
-/sandbox/wiki/
-  index.md          ← entry point listing all pages with summaries
-  log.md            ← optional update history
-  <concept>.md      ← OKF knowledge units (type, title, description, tags frontmatter)
-  <subdir>/
-    index.md
-    <concept>.md
-  raw/
-    assets/         ← drop zone for new source material (wiki_ingest writes here)
-```
-
-### Mounting
-
-```bash
-podman run --rm -it \
-  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
-  --env CLOUD_ML_REGION=us-east5 \
-  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
-  -v /path/to/your/vault:/sandbox/wiki:z \
-  ghcr.io/aipcc/nous:latest
-```
-
-### Search behaviour
-
-`wiki_search` does a case-insensitive substring scan over all `.md` files in the wiki tree. It extracts the `title` frontmatter field (or first `#` heading) and returns a 300-character excerpt centred on the first match. For large wikis, prefer specific queries — the tool stops after `max_results` (default 5, max 20) matches.
-
 ## Built-in tools
 
 ### `web_search`

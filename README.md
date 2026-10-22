@@ -18,8 +18,6 @@
 
 **Token compression** — [rtk-oss](https://github.com/rtk-ai/rtk) (Apache-2.0) compresses bash tool output before pi reads it, cutting 60–90% of tokens on large command outputs. Installed and registered automatically at build time.
 
-**LLM wiki** — mount an [OKF-format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) knowledge wiki (built from an Obsidian vault) at `/sandbox/wiki` and the agent gets three tools: `wiki_search`, `wiki_read`, and `wiki_ingest` (to queue new source material for the processor). Not mounted = tools not registered.
-
 **Kernel-level egress control** — runs inside [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell), which enforces network policy at the kernel level. The agent can only reach what you explicitly allow.
 
 **Productization skills** — the `nous-productization` image extends the base image with [productization-skills](https://github.com/opendatahub-io/productization-skills): 18 pi-native skills for Jira, GitLab, Konflux, Google Workspace, Slack, and more, plus the tool CLIs they depend on (`gh`, `glab`, `jq`, `yq`, `kubectl`, `kustomize`, `tkn`, `uv`, …). All installed at build time — no runtime setup.
@@ -28,8 +26,8 @@
 
 | Image | Tag | Contents |
 |---|---|---|
-| `ghcr.io/aipcc/nous` | `latest` / `<sha>` / `<version>` | Router, web search, code review |
-| `ghcr.io/aipcc/nous-productization` | `<skills-ref>-<nous-version>` / `latest` | Base + 18 skills + tool CLIs |
+| `ghcr.io/aipcc/nous` | `latest` / `<sha>` / `<version>` | Router, web search, code review, wiki tools (when mounted), rtk token compression |
+| `ghcr.io/aipcc/nous-productization` | `<skills-ref>-<nous-version>` / `latest` | Base + 18 skills + tool CLIs + Python 3.12 |
 
 Both are built from the same `Containerfile` using named targets (`--target nous` / `--target nous-productization`). The productization tag encodes both sides — e.g. `0.9.1-0.3.0` means skills `v0.9.1` on top of nous `v0.3.0`. Renovate tracks the skills release and bumps `SKILLS_REF` automatically.
 
