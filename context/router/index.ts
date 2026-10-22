@@ -2,6 +2,8 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { discoverTools, callMcpToolSSE, callMcpToolStreamable, type DiscoveryResult } from "./router/mcp";
 import { ddgSearch } from "./router/search";
 import { discoverTiers, registerRouter } from "./router/model";
+import { wikiSearch, wikiRead, wikiIngest, WIKI_PATH } from "./router/wiki";
+import { existsSync } from "fs";
 
 export default async function (pi: ExtensionAPI) {
   // ── Code review tool (ocr delegate mode) ───────────────────────────────────
@@ -130,6 +132,76 @@ Use 'preview' mode first to see what files would be selected before doing the fu
       }
     },
   } as any);
+
+  // ── LLM-Wiki tools (OKF 2.0) ────────────────────────────────────────────────
+  // Registered only when the wiki is mounted at WIKI_PATH (default /sandbox/wiki).
+  if (existsSync(WIKI_PATH)) {
+    process.stderr.write(`[nous] wiki: found at ${WIKI_PATH} — registering wiki_search, wiki_read, wiki_ingest\n`);
+
+    pi.registerTool({
+      name: "wiki_search",
+      label: "Wiki Search",
+      description: `Search the personal knowledge wiki (OKF 2.0 format) mounted at ${WIKI_PATH}.
+The wiki is a collection of curated markdown pages with YAML frontmatter (type, title, description, tags).
+Use this before web_search when looking for domain knowledge, personal notes, or context about the user's projects.
+The search scores results by matches in title (highest), description, tags, and body text.
+After finding relevant pages, use wiki_read to fetch their full content.`,
+      parameters: {
+        type: "object",
+        properties: {
+          query:  { type: "string", description: "Keywords or phrase to search for" },
+          limit:  { type: "number", description: "Maximum results to return (default 5)", default: 5 },
+        },
+        required: ["query"],
+      } as any,
+      async execute(_id: string, params: any) {
+        const result = wikiSearch(String(params.query), Number(params.limit ?? 5));
+        return { content: [{ type: "text" as const, text: result }] };
+      },
+    } as any);
+
+    pi.registerTool({
+      name: "wiki_read",
+      label: "Wiki Read",
+      description: `Read a specific page from the personal knowledge wiki at ${WIKI_PATH}.
+Provide the relative path returned by wiki_search (e.g. "concepts/topic.md").
+The .md extension is optional. Returns the full OKF markdown content including frontmatter.`,
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "Relative path to the wiki page (e.g. 'concepts/topic.md')" },
+        },
+        required: ["path"],
+      } as any,
+      async execute(_id: string, params: any) {
+        const result = wikiRead(String(params.path));
+        return { content: [{ type: "text" as const, text: result }] };
+      },
+    } as any);
+
+    pi.registerTool({
+      name: "wiki_ingest",
+      label: "Wiki Ingest",
+      description: `Save a new source document to the wiki's raw/assets/ folder for the processor agent to pick up.
+Use this to feed new content (notes, summaries, transcripts, findings) into the wiki pipeline.
+The processor agent reads raw/assets/ and integrates the content into the wiki on its next run.
+Do NOT use this to write wiki pages directly — the processor agent handles that.`,
+      parameters: {
+        type: "object",
+        properties: {
+          filename: { type: "string", description: "Filename for the new asset (e.g. 'meeting-notes-2026-10-22.md')" },
+          content:  { type: "string", description: "Text content to save" },
+        },
+        required: ["filename", "content"],
+      } as any,
+      async execute(_id: string, params: any) {
+        const result = wikiIngest(String(params.filename), String(params.content));
+        return { content: [{ type: "text" as const, text: result }] };
+      },
+    } as any);
+  } else {
+    process.stderr.write(`[nous] wiki: not mounted (${WIKI_PATH} not found) — wiki tools skipped\n`);
+  }
 
   // ── Model router ────────────────────────────────────────────────────────────
   // Probe Vertex AI at boot to build live tiers from confirmed-available models.

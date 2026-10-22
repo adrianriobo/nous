@@ -3,10 +3,16 @@
  * Multi-turn mock server for the Vertex AI Anthropic streaming endpoint.
  *
  * Supports two scenarios via MOCK_SCENARIO env var:
- *   - "text"       (default) Plain text response — used for smoke / policy tests.
- *   - "web_search" First turn returns a web_search tool_use; after receiving the
- *                  tool_result it returns a final text response. Used to test that
- *                  the agent can execute the web_search tool end-to-end.
+ *   - "text"        (default) Plain text response — used for smoke / policy tests.
+ *   - "web_search"  First turn returns a web_search tool_use; after receiving the
+ *                   tool_result it returns a final text response. Used to test that
+ *                   the agent can execute the web_search tool end-to-end.
+ *   - "wiki_search"  First turn returns a wiki_search tool_use; after receiving the
+ *                   tool_result it returns a final text response. Used to test that
+ *                   the wiki tools are wired up and can return results.
+ *   - "wiki_ingest"  First turn returns a wiki_ingest tool_use; after receiving the
+ *                   tool_result it returns a final text response. Used to test that
+ *                   wiki_ingest writes to raw/assets/.
  *
  * Port defaults to 4010; override with PORT env var.
  */
@@ -15,6 +21,8 @@ import http from "http";
 const PORT = parseInt(process.env.PORT ?? "4010", 10);
 const SCENARIO = process.env.MOCK_SCENARIO ?? "text";
 const FINAL_TEXT = "Task completed. Search results were retrieved successfully.";
+const WIKI_FINAL_TEXT = "Wiki lookup complete. Found information about nous agent.";
+const WIKI_INGEST_FINAL_TEXT = "Ingest complete. Content saved to wiki assets.";
 const PLAIN_TEXT = process.env.MOCK_RESPONSE ?? "Hello from haropz mock vertex server";
 
 function sse(res, payload) {
@@ -83,18 +91,29 @@ const server = http.createServer((req, res) => {
       Connection: "keep-alive",
     });
 
+    const messages = parsed.messages ?? [];
+    const hasToolResult = messages.some((m) =>
+      Array.isArray(m.content) &&
+      m.content.some((b) => b.type === "tool_result")
+    );
+
     if (SCENARIO === "web_search") {
-      // Multi-turn: if request already has a tool_result → send final text.
-      // Otherwise → request a web_search tool call.
-      const messages = parsed.messages ?? [];
-      const hasToolResult = messages.some((m) =>
-        Array.isArray(m.content) &&
-        m.content.some((b) => b.type === "tool_result")
-      );
       if (hasToolResult) {
         streamText(res, FINAL_TEXT);
       } else {
         streamToolUse(res, "web_search", "toolu_mock_ws_001", { query: "NVIDIA OpenShell agent runtime" });
+      }
+    } else if (SCENARIO === "wiki_search") {
+      if (hasToolResult) {
+        streamText(res, WIKI_FINAL_TEXT);
+      } else {
+        streamToolUse(res, "wiki_search", "toolu_mock_wiki_001", { query: "nous", limit: 3 });
+      }
+    } else if (SCENARIO === "wiki_ingest") {
+      if (hasToolResult) {
+        streamText(res, WIKI_INGEST_FINAL_TEXT);
+      } else {
+        streamToolUse(res, "wiki_ingest", "toolu_mock_wiki_002", { filename: "ci-test-note.md", content: "CI integration test content" });
       }
     } else {
       streamText(res, PLAIN_TEXT);

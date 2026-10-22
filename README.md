@@ -14,7 +14,11 @@
 
 **AI code review** — powered by [Alibaba open-code-review](https://github.com/alibaba/open-code-review). Point it at a GitHub PR and it gives you structured, rule-based feedback.
 
+**Personal knowledge wiki** — mount an [OKF 2.0](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) wiki (e.g. an Obsidian vault processed by an LLM-wiki agent) and nous gains three tools: `wiki_search`, `wiki_read`, and `wiki_ingest`. The agent searches your curated knowledge base before reaching for the web, and can feed new content into the wiki pipeline via `raw/assets/`.
+
 **Token compression** — [rtk-oss](https://github.com/rtk-ai/rtk) (Apache-2.0) compresses bash tool output before pi reads it, cutting 60–90% of tokens on large command outputs. Installed and registered automatically at build time.
+
+**LLM wiki** — mount an [OKF-format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) knowledge wiki (built from an Obsidian vault) at `/sandbox/wiki` and the agent gets three tools: `wiki_search`, `wiki_read`, and `wiki_ingest` (to queue new source material for the processor). Not mounted = tools not registered.
 
 **Kernel-level egress control** — runs inside [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell), which enforces network policy at the kernel level. The agent can only reach what you explicitly allow.
 
@@ -54,6 +58,29 @@ echo 'Review PR https://github.com/OWNER/REPO/pull/42' | \
   -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
   ghcr.io/aipcc/nous:latest
 ```
+
+## Personal knowledge wiki
+
+Mount an [OKF 2.0](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) wiki at `/sandbox/wiki` and nous gains three tools automatically:
+
+```bash
+podman run --rm -it \
+  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
+  --env CLOUD_ML_REGION=us-east5 \
+  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  -v /path/to/your/obsidian-vault:/sandbox/wiki:z \
+  ghcr.io/aipcc/nous:latest
+```
+
+| Tool | What it does |
+|---|---|
+| `wiki_search` | Scores pages by match in title, description, tags, and body — returns excerpts |
+| `wiki_read` | Reads a full wiki page by its relative path |
+| `wiki_ingest` | Writes new content to `raw/assets/` for the processor agent to pick up |
+
+The wiki follows the [LLM-wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): an `index.md` catalog, a `log.md` history, OKF concept pages, and a `raw/` directory of immutable source documents. nous reads the wiki pages and can feed new content into the pipeline via `raw/assets/` — it never writes wiki pages directly.
+
+Override the default mount path with `WIKI_PATH` if needed.
 
 ## Credentials
 
