@@ -47,7 +47,7 @@ jobs:
           restore-keys: podman-
 
       - name: Log in to GHCR
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" \
             | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
@@ -69,6 +69,10 @@ jobs:
             NOUS_VER="${VERSION#v}"
             echo "base_tags=${BASE}:${SHA},${BASE}:latest,${BASE}:${VERSION}" >> "$GITHUB_OUTPUT"
             echo "prod_tags=${PROD}:${SKILLS_VER}-${NOUS_VER},${PROD}:latest" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_NUM="${{ github.event.pull_request.number }}"
+            echo "base_tags=${BASE}:pr-${PR_NUM}-${SHA}" >> "$GITHUB_OUTPUT"
+            echo "prod_tags=${PROD}:${SKILLS_VER}-pr-${PR_NUM}-${SHA}" >> "$GITHUB_OUTPUT"
           else
             echo "base_tags=${BASE}:${SHA},${BASE}:latest" >> "$GITHUB_OUTPUT"
             echo "prod_tags=${PROD}:${SKILLS_VER}-${SHA},${PROD}:latest" >> "$GITHUB_OUTPUT"
@@ -144,7 +148,7 @@ jobs:
           retention-days: 1
 
       - name: Push images
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         run: |
           IFS=',' read -ra BASE_TAGS <<< "${{ steps.tags.outputs.base_tags }}"
           for t in "${BASE_TAGS[@]}"; do podman push "$t"; done

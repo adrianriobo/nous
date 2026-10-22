@@ -161,6 +161,10 @@ Installed by the skills-builder stage into `/usr/local/bin/`:
 
 Binary collection is resilient — installers run with `|| true` and only successfully-installed binaries are staged, so a failing installer never breaks the build.
 
+### Python runtime
+
+Python 3.12 is installed in the `nous-productization` stage so skills that shell out to Python scripts work out of the box. The base `nous` image (Hummingbird OS) has no package manager, so Python is installed via `uv python install 3.12` into `/opt/uv-python/` with symlinks at `/usr/local/bin/python3` and `/usr/local/bin/pip3`.
+
 ### Customising the skills ref
 
 To pin a specific tag or branch of productization-skills:
