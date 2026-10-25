@@ -5,7 +5,7 @@ ARG BASE_IMAGE=quay.io/aipcc/base-images/agentic/pi:${BASE_TAG}
 # renovate: datasource=github-releases depName=opendatahub-io/productization-skills
 ARG SKILLS_REF=v0.9.1
 # renovate: datasource=github-releases depName=rtk-ai/rtk
-ARG RTK_VERSION=v1.0.1
+ARG RTK_VERSION=v1.1.0
 
 # ── Skills builder ────────────────────────────────────────────────────────────
 # Clones productization-skills and installs tool CLIs (gh, glab, kubectl, etc.)
