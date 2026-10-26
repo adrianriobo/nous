@@ -1,6 +1,6 @@
 # ── Global build args (must be before any FROM to be usable in FROM) ──────────
 # renovate: datasource=docker depName=quay.io/aipcc/base-images/agentic/pi
-ARG BASE_TAG=1.3.0
+ARG BASE_TAG=1.4.0
 ARG BASE_IMAGE=quay.io/aipcc/base-images/agentic/pi:${BASE_TAG}
 # renovate: datasource=github-releases depName=opendatahub-io/productization-skills
 ARG SKILLS_REF=v0.9.1
