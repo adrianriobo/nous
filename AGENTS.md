@@ -132,6 +132,14 @@ When `/sandbox/wiki` exists (or `WIKI_PATH` env var points elsewhere), three too
 
 The wiki tools are no-op when the directory is absent — no configuration needed to opt out.
 
+**Common conventions** — `context/APPEND_SYSTEM.md` is baked into the image at `/sandbox/.pi/agent/APPEND_SYSTEM.md`. It contains:
+- ASD-STE100 communication standard (all agent output)
+- Work location conventions (`/workspace`, `/sandbox/AGENTS.md`, `/sandbox/wiki/`)
+- Git configuration (name, email)
+- Wiki-first startup procedure (search before starting any task)
+
+This is additive — it does not override any task-specific `AGENTS.md` mounted at `/sandbox/AGENTS.md`. Pi loads both files without conflict.
+
 ## Token compression (rtk-oss)
 
 nous bundles [rtk-oss](https://github.com/rtk-ai/rtk) (Apache-2.0), a Rust binary that compresses shell command output before pi reads it — typically 60–90% token reduction on large command outputs.

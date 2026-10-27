@@ -80,6 +80,20 @@ The wiki follows the [LLM-wiki pattern](https://gist.github.com/karpathy/442a6bf
 
 Override the default mount path with `WIKI_PATH` if needed.
 
+## Common agent conventions
+
+The image bakes common agent conventions into `/sandbox/.pi/agent/APPEND_SYSTEM.md`. These apply to every nous deployment and every task-specific `AGENTS.md` file you provide:
+
+| Convention | What it specifies |
+|---|---|
+| ASD-STE100 | Communication standard for all agent output (conversational replies, commit messages, MR descriptions, code comments, documentation) |
+| Work locations | `/workspace` for all repository work; `/sandbox/AGENTS.md` for task instructions; `/sandbox/wiki/` for knowledge base |
+| Git identity | Pre-configured name and email for all commits |
+| Startup procedure | Search the wiki first before starting any task; read matching pages; check `/workspace` for prior artifacts |
+| Code review | Always run `code_review` (OCR rule engine) first when reviewing PRs or MRs; then apply LLM analysis on top |
+
+Task-specific `AGENTS.md` files you mount at `/sandbox/AGENTS.md` define your role, goal, repositories, and responsibilities. Pi loads both the common conventions and your task-specific instructions without conflict.
+
 ## Credentials
 
 nous needs two env vars and Google credentials:
