@@ -18,6 +18,7 @@ RUN dnf install -y --allowerasing --setopt=install_weak_deps=False \
          https://github.com/opendatahub-io/productization-skills \
          /productization-skills \
     && bash -euc '\
+        export TARGETARCH=$(uname -m | sed "s/x86_64/amd64/;s/aarch64/arm64/"); \
         src=/productization-skills/productization-plugin/tools; \
         for f in "$src"/*/install.sh; do \
           echo "[nous-build] installing: $(basename $(dirname $f))"; \
