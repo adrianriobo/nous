@@ -273,6 +273,14 @@ jobs:
             || { echo "FAIL: expected 'hello' in output"; exit 1; }
           echo "PASS: pi started and responded"
 
+      - name: Run subagent tests
+        run: |
+          podman run --rm --network=host \
+            --entrypoint /bin/bash \
+            -v "$PWD:/workspace/nous:ro,z" \
+            -w /workspace/nous \
+            nous:test -c 'node --test --test-timeout=30000 tests/subagent.test.mjs'
+
       - name: Stop mock server
         if: always()
         run: kill "$MOCK_PID" 2>/dev/null || true
