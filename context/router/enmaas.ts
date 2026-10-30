@@ -9,12 +9,14 @@ import { readFileSync } from "fs";
 // catalog, and discovers live routing tiers at boot.
 
 export const PROVIDER_ID = "enmaas";
-export const DEFAULT_BASE_URL = "https://api.enmaas.devshift.net/v1";
 
-// ENMAAS_BASE_URL overrides the endpoint (integration tests, mirrors).
+// The gateway endpoint is internal. It has no default in this repository —
+// set ENMAAS_BASE_URL in your environment (for example in your shell profile
+// or the container env). The value must point at the OpenAI-compatible base
+// URL of the gateway.
 export function resolveBaseUrl(): string {
-  const override = process.env.ENMAAS_BASE_URL?.trim();
-  return override ? override.replace(/\/+$/, "") : DEFAULT_BASE_URL;
+  const url = process.env.ENMAAS_BASE_URL?.trim();
+  return url ? url.replace(/\/+$/, "") : "";
 }
 
 export type Tier = { provider: string; id: string };
@@ -136,6 +138,11 @@ function resolveApiKey(): string | undefined {
 
 // Probe GET /v1/models on the gateway and keep the candidates it lists.
 export async function discoverTiers(): Promise<Tier[]> {
+  if (!resolveBaseUrl()) {
+    process.stderr.write("[nous] router: ENMAAS_BASE_URL not set — using fallback tiers\n");
+    return FALLBACK_TIERS;
+  }
+
   const key = resolveApiKey();
 
   if (!key) {
@@ -173,9 +180,18 @@ export async function discoverTiers(): Promise<Tier[]> {
 // ── Provider registration ──────────────────────────────────────────────────────
 
 export function registerEnmaasProvider(pi: ExtensionAPI) {
+  const baseUrl = resolveBaseUrl();
+  if (!baseUrl) {
+    // The entrypoint blocks this state, but direct `pi` runs can reach it.
+    // Register against a .invalid host so any request fails fast with a
+    // clear cause instead of hitting a real endpoint.
+    process.stderr.write(
+      "[nous] enmaas: ENMAAS_BASE_URL is not set — set it to the gateway base URL.\n"
+    );
+  }
   pi.registerProvider(PROVIDER_ID, {
     name: "EnMaaS",
-    baseUrl: resolveBaseUrl(),
+    baseUrl: baseUrl || "http://enmaas-base-url-not-set.invalid/v1",
     apiKey: "$ENMAAS_API_KEY",
     api: "openai-completions",
     models: CATALOG,

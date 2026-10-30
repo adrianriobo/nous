@@ -1,7 +1,7 @@
 #!/bin/bash
-# Auth mode:
-#   EnMaaS : ENMAAS_API_KEY (or a stored pi /login credential)
-#   Mock   : ENMAAS_BASE_URL (integration tests — skips the auth check)
+# Required environment:
+#   ENMAAS_BASE_URL : EnMaaS gateway base URL (no default — set it in your env)
+#   ENMAAS_API_KEY  : EnMaaS API key (or a stored pi /login credential)
 set -euo pipefail
 
 _write_pi_creds() {
@@ -16,8 +16,10 @@ _write_pi_creds() {
 }
 
 _check_auth() {
-    # Skip auth when using a mock/override endpoint (integration tests)
-    [[ -n "${ENMAAS_BASE_URL:-}" ]] && return 0
+    if [[ -z "${ENMAAS_BASE_URL:-}" ]]; then
+        echo >&2 "ERROR: ENMAAS_BASE_URL is not set. Set it to the EnMaaS gateway base URL."
+        return 1
+    fi
     if [[ -n "${ENMAAS_API_KEY:-}" ]]; then return 0; fi
     # Accept a stored credential created with `pi /login`
     if grep -q '"enmaas"' "${HOME}/.pi/agent/auth.json" 2>/dev/null; then return 0; fi

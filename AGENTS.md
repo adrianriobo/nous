@@ -51,7 +51,7 @@ The provider (`enmaas`) is registered by the router extension at boot. The gatew
       └─ retry / escalation        → step up one tier (deepseek → glm → mini → terra)
             │
             ▼
-  enmaas provider (openai-completions)  →  api.enmaas.devshift.net
+  enmaas provider (openai-completions)  →  $ENMAAS_BASE_URL
 ```
 
 ## Boot-time model discovery
@@ -297,12 +297,14 @@ Runs on `ubuntu-26.04` (kernel 7.0, Landlock ABI satisfied). No EnMaaS credentia
 # Interactive
 podman run --rm -it \
   --env ENMAAS_API_KEY=<your-api-key> \
+  --env ENMAAS_BASE_URL=<your-gateway-base-url> \
   ghcr.io/aipcc/nous:latest
 
 # Pipe a task
 echo 'your task here' | \
   podman run --rm -i \
   --env ENMAAS_API_KEY=<your-api-key> \
+  --env ENMAAS_BASE_URL=<your-gateway-base-url> \
   ghcr.io/aipcc/nous:latest
 ```
 

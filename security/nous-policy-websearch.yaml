@@ -25,9 +25,12 @@ filesystem_policy:
 network_policies:
 
   # ── EnMaaS inference + model discovery ────────────────────────────────────
+  # The gateway host is internal and ships as a placeholder: replace
+  # enmaas-gateway.example.com with the host from your ENMAAS_BASE_URL
+  # before applying this policy.
   enmaas:
     endpoints:
-      - host: api.enmaas.devshift.net
+      - host: enmaas-gateway.example.com
         port: 443
         protocol: rest
         access: full

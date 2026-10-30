@@ -42,13 +42,14 @@ echo "Entrypoint:"
 _run_no_api "pi passthrough --help"    0 pi --help
 _run_no_api "missing API key rejected" 1
 
-if [[ -n "${ENMAAS_API_KEY:-}" ]]; then
+# ENMAAS_BASE_URL must also be set for the live tests below.
+if [[ -n "${ENMAAS_API_KEY:-}" && -n "${ENMAAS_BASE_URL:-}" ]]; then
     echo ""
     echo "Live pi (API key present):"
-    _run "pi one-liner" 0 pi --model enmaas/gemini-3.8-flash --print "Reply with the word HELLO only."
+    _run "pi one-liner" 0 pi --model enmaas/rits/zai-org/glm-5-3 --print "Reply with the word HELLO only."
 else
     echo ""
-    echo "  [smoke] live-API tests skipped (ENMAAS_API_KEY not set)"
+    echo "  [smoke] live-API tests skipped (ENMAAS_API_KEY or ENMAAS_BASE_URL not set)"
 fi
 
 echo ""
