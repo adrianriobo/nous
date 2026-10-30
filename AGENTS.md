@@ -27,12 +27,12 @@ The `nous-productization` target adds only one layer on top of `nous` (skills di
 
 nous wraps [pi](https://github.com/earendil-works/pi) with a TypeScript extension (`context/router/`) that provides:
 
-1. **Virtual model router** — registers a `router/auto` model that selects the right Claude tier per turn
+1. **Virtual model router** — registers a `router/auto` model that selects the right EnMaaS tier per turn
 2. **`web_search` tool** — DuckDuckGo via fetch
 3. **`code_review` tool** — Alibaba open-code-review in delegate mode
 4. **MCP tool injection** — discovers and registers tools from any HTTP MCP server at startup
 
-The provider (`pi-provider-vertex-anthropic`) is installed at image build time. `context/vertex-api-patch.ts` overlays the provider's `src/vertex-api.ts` to fix a bug where tools were never sent to the Vertex API (the provider read `context.tools` which pi never populates; the fix extracts tools from pi's system messages instead).
+The provider (`enmaas`) is registered by the router extension at boot. The gateway speaks the OpenAI completions API that pi supports natively, so no provider package or patch is needed.
 
 ```
   user prompt
@@ -41,31 +41,31 @@ The provider (`pi-provider-vertex-anthropic`) is installed at image build time. 
   pi session
       │  calls router/auto
       ▼
-  discoverTiers() → probes Vertex AI at boot → live tier list
+  discoverTiers() → probes the EnMaaS gateway at boot → live tier list
       │
       ▼
   router.ts → selects tier based on complexity + phase
       │
-      ├─ trivial / implement phase → claude-haiku-4-5  (or Gemini Flash if available)
-      ├─ plan phase (default)      → claude-opus-4-6
-      └─ retry / escalation        → step up one tier (haiku → sonnet → opus)
+      ├─ trivial / implement phase → gemini-3.8-flash
+      ├─ plan phase (default)      → gpt-6.1-terra
+      └─ retry / escalation        → step up one tier (flash → mini → glm → terra)
             │
             ▼
-  pi-provider-vertex-anthropic  →  Vertex AI (googleapis.com)
+  enmaas provider (openai-completions)  →  api.enmaas.devshift.net
 ```
 
 ## Boot-time model discovery
 
-At startup, `discoverTiers()` probes every model in `VERTEX_CANDIDATES` in parallel using your ADC credentials. Any model that responds (even with an auth or quota error — anything other than 404) is considered available and added to the tier list. The list is sorted cheapest → most-capable so the router can step through tiers on retry.
+At startup, `discoverTiers()` calls `GET /v1/models` on the EnMaaS gateway with the API key. Every tier candidate the gateway lists is considered available. The list keeps the candidate order, cheapest → most-capable, so the router can step through tiers on retry.
 
-If credentials are unavailable or the probe times out, the router falls back to `FALLBACK_TIERS` (Haiku → Sonnet → Opus 4.6).
+If the API key is missing or the probe fails, the router falls back to `FALLBACK_TIERS` (Gemini Flash → GPT 5.4 Mini → GLM 5.3 → GPT 6.1 Terra).
 
 Boot log example:
 ```
-[nous] router: discovered tiers — [0]claude-haiku-4-5@20251001, [1]claude-sonnet-4-5@20250929, [2]claude-opus-4-6
+[nous] router: discovered tiers — [0]gemini-3.8-flash, [1]gpt-5.4-mini, [2]rits/zai-org/glm-5-3, [3]gpt-6.1-terra
 ```
 
-To add a new candidate model, add it to `VERTEX_CANDIDATES` in `context/router/model.ts` (most-capable first). It will be probed automatically on next boot.
+To add a new candidate model, add it to `TIER_CANDIDATES` in `context/router/enmaas.ts` (cheapest first). It will be probed automatically on next boot.
 
 ## Router logic
 
@@ -73,30 +73,30 @@ The router implements a two-phase strategy:
 
 | Phase | Trigger | Model |
 |---|---|---|
-| Plan | All new turns and continuations | Opus 4.6 (default) or Haiku (trivial only) |
-| Implement | After any write/edit/bash tool call | Haiku or Gemini Flash |
-| Escalate | On retry | Haiku → Sonnet → Opus 4.6 |
+| Plan | All new turns and continuations | GPT 6.1 Terra (default) or Gemini 3.8 Flash (trivial only) |
+| Implement | After any write/edit/bash tool call | Gemini 3.8 Flash |
+| Escalate | On retry | Flash → Mini → GLM → Terra |
 
-**Default is Opus 4.6** ($5/1M input — best available on Vertex AI). Haiku is used only when a query is *trivially simple*: fewer than 20 words AND contains no technical keywords (`code`, `function`, `error`, `debug`, `explain`, `analyze`, `review`, `deploy`, `build`, …). Everything else — including short technical questions — goes to Opus 4.6.
+**Default is GPT 6.1 Terra.** Gemini 3.8 Flash is used only when a query is *trivially simple*: fewer than 20 words AND contains no technical keywords (`code`, `function`, `error`, `debug`, `explain`, `analyze`, `review`, `deploy`, `build`, …). Everything else — including short technical questions — goes to GPT 6.1 Terra.
 
-**Implement phase** — once any write/edit/bash tool call appears in the message history, the router switches to Haiku (or Gemini Flash if available) for mechanical implementation turns. If the user then asks something complex mid-session, the plan-phase logic re-evaluates and upgrades back to Opus 4.6.
+**Implement phase** — once any write/edit/bash tool call appears in the message history, the router switches to Gemini 3.8 Flash for mechanical implementation turns. If the user then asks something complex mid-session, the plan-phase logic re-evaluates and upgrades back to GPT 6.1 Terra.
 
-**Retry escalation** — on each retry the router steps up one tier: Haiku → Sonnet → Opus.
+**Retry escalation** — on each retry the router steps up one tier: Flash → Mini → GLM → Terra.
 
-**Gemini Flash** — when a Gemini Flash model is registered (2.0 or 1.5 variants), it is preferred over Haiku for cheap turns.
+**Flash models** — when a Gemini Flash model is registered (3.8, 3.7, or 3.6), it is preferred for cheap turns.
 
-**Thinking levels** — explicit `low`/`medium`/`high` settings map to Haiku/Sonnet/Opus regardless of complexity detection. `off` (the default) lets the router decide.
+**Thinking levels** — explicit `low`/`medium`/`high` settings map to Flash/Mini/Terra regardless of complexity detection. `off` (the default) lets the router decide.
 
 ## Models
 
 | Model | Provider | Tier | Cost (input/1M) | Use |
 |---|---|---|---|---|
-| `claude-haiku-4-5@20251001` | vertex-anthropic | 0 | $1 | Trivial queries, implement phase |
-| `claude-sonnet-4-5@20250929` | vertex-anthropic | 1 | $3 | Retry escalation intermediate |
-| `claude-opus-4-6` | vertex-anthropic | 2 | $5 | **Default plan phase** |
-| `gemini-2.0-flash-001` | google-vertex | — | — | Cheapest fallback for implement phase (if available) |
+| `gemini-3.8-flash` | enmaas | 0 | $0 | Trivial queries, implement phase |
+| `gpt-5.4-mini` | enmaas | 1 | $0 | Retry escalation intermediate |
+| `rits/zai-org/glm-5-3` | enmaas | 2 | $0 | Strong open-weight tier |
+| `gpt-6.1-terra` | enmaas | 3 | $0 | **Default plan phase** |
 
-Opus 4.6 is both the highest quality and most cost-effective premium model available on Vertex AI via `pi-provider-vertex-anthropic`. When Claude 5 models appear on Vertex, bump `PI_PROVIDER_VERTEX_VERSION` in the Containerfile and update this table.
+Costs are zero: the internal gateway meters usage downstream, not through pi. The full catalog is declared in `context/router/enmaas.ts`. When the gateway adds models, add them to `CATALOG` there and update this table.
 
 ## Personal knowledge wiki (OKF 2.0)
 
@@ -226,7 +226,7 @@ Policy files live in `security/`:
 
 | File | Purpose |
 |---|---|
-| `security/nous-policy.yaml` | Production default — Vertex AI + GitHub |
+| `security/nous-policy.yaml` | Production default — EnMaaS + GitHub |
 | `security/nous-policy-websearch.yaml` | Adds DuckDuckGo |
 
 Rules are scoped to specific binaries (`/usr/bin/node-26` for pi/ocr, `/usr/bin/git` for clone). Binary paths were resolved inside the image with `readlink -f $(command -v node)`.
@@ -262,8 +262,8 @@ Runs on `ubuntu-26.04`. Uses `GITHUB_TOKEN` (auto-provided) for GHCR access — 
   install OpenShell (curl installer, systemd user service)
         │
         ▼
-  start mock-vertex-server.mjs on :4010
-        │  (emits Anthropic SSE stream, no real API key needed)
+  start mock-enmaas-server.mjs on :4010
+        │  (emits OpenAI SSE stream, no real API key needed)
         ▼
   openshell sandbox create --from nous:test \
     --policy security/nous-policy.yaml --dry-run
@@ -272,15 +272,15 @@ Runs on `ubuntu-26.04`. Uses `GITHUB_TOKEN` (auto-provided) for GHCR access — 
         │
         ▼
   [functional job] podman run nous:test
-    --env VERTEX_API_BASE_URL=http://<runner-ip>:4010
+    --env ENMAAS_BASE_URL=http://<runner-ip>:4010/v1
         │
         ▼
   assert output contains expected text
 ```
 
-Runs on `ubuntu-26.04` (kernel 7.0, Landlock ABI satisfied). No Vertex AI credentials required.
+Runs on `ubuntu-26.04` (kernel 7.0, Landlock ABI satisfied). No EnMaaS credentials required.
 
-**`VERTEX_API_BASE_URL` env var** — when set, `vertex-api-patch.ts` replaces the Vertex AI base URL and skips Google auth token fetch. Only use this in tests.
+**`ENMAAS_BASE_URL` env var** — when set, the router extension registers the EnMaaS provider against this base URL instead of the production gateway. Only use this in tests.
 
 ## Running
 
@@ -289,17 +289,13 @@ Runs on `ubuntu-26.04` (kernel 7.0, Landlock ABI satisfied). No Vertex AI creden
 ```bash
 # Interactive
 podman run --rm -it \
-  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
-  --env CLOUD_ML_REGION=us-east5 \
-  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  --env ENMAAS_API_KEY=<your-api-key> \
   ghcr.io/aipcc/nous:latest
 
 # Pipe a task
 echo 'your task here' | \
   podman run --rm -i \
-  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
-  --env CLOUD_ML_REGION=us-east5 \
-  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  --env ENMAAS_API_KEY=<your-api-key> \
   ghcr.io/aipcc/nous:latest
 ```
 
@@ -311,14 +307,14 @@ echo 'your task here' | \
 # Interactive
 openshell sandbox create \
   --from ghcr.io/aipcc/nous:latest \
-  --provider vertex-nous \
+  --provider enmaas-nous \
   --policy ./security/nous-policy.yaml
 
 # Pipe a task
 echo 'Review PR https://github.com/OWNER/REPO/pull/NNN' | \
   openshell sandbox create \
   --from ghcr.io/aipcc/nous:latest \
-  --provider vertex-nous \
+  --provider enmaas-nous \
   --policy ./security/nous-policy.yaml \
   -- pi --print -
 

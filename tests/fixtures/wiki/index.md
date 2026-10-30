@@ -8,5 +8,5 @@ description: Catalog of all pages in the test wiki.
 
 | Page | Type | Description |
 |---|---|---|
-| [nous](concepts/nous.md) | Agent | nous coding agent for Vertex AI |
-| [vertex-ai](concepts/vertex-ai.md) | Platform | Google Cloud Vertex AI platform |
+| [nous](concepts/nous.md) | Agent | nous coding agent for EnMaaS |
+| [enmaas](concepts/enmaas.md) | Platform | Internal Models-as-a-Service AI gateway |

@@ -1,16 +1,13 @@
 #!/bin/bash
-# Auth modes:
-#   Anthropic direct : ANTHROPIC_API_KEY
-#   Vertex AI (SA)   : GOOGLE_CLOUD_PROJECT + GOOGLE_APPLICATION_CREDENTIALS
-#   Vertex AI (ADC)  : GOOGLE_CLOUD_PROJECT + ~/.config/gcloud/application_default_credentials.json
+# Auth mode:
+#   EnMaaS : ENMAAS_API_KEY (or a stored pi /login credential)
+#   Mock   : ENMAAS_BASE_URL (integration tests — skips the auth check)
 set -euo pipefail
 
 _write_pi_creds() {
     local creds=/sandbox/.pi-creds.env
     : > "$creds"
-    for var in ANTHROPIC_VERTEX_PROJECT_ID GOOGLE_CLOUD_PROJECT \
-                GOOGLE_CLOUD_LOCATION CLOUD_ML_REGION \
-                GOOGLE_APPLICATION_CREDENTIALS ANTHROPIC_API_KEY; do
+    for var in ENMAAS_API_KEY ENMAAS_BASE_URL; do
         local val
         read -r val <<< "${!var:-}"   # strips leading/trailing whitespace
         [[ -n "$val" ]] && printf 'export %s=%q\n' "$var" "$val" >> "$creds"
@@ -20,14 +17,11 @@ _write_pi_creds() {
 
 _check_auth() {
     # Skip auth when using a mock/override endpoint (integration tests)
-    [[ -n "${VERTEX_API_BASE_URL:-}" ]] && return 0
-    if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then return 0; fi
-    local has_project="${GOOGLE_CLOUD_PROJECT:-}${ANTHROPIC_VERTEX_PROJECT_ID:-}"
-    if [[ -n "${has_project}" ]]; then
-        [[ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]] && return 0
-        [[ -f "${HOME}/.config/gcloud/application_default_credentials.json" ]] && return 0
-    fi
-    echo >&2 "ERROR: no auth configured. Set ANTHROPIC_API_KEY, or GOOGLE_CLOUD_PROJECT + credentials."
+    [[ -n "${ENMAAS_BASE_URL:-}" ]] && return 0
+    if [[ -n "${ENMAAS_API_KEY:-}" ]]; then return 0; fi
+    # Accept a stored credential created with `pi /login`
+    if grep -q '"enmaas"' "${HOME}/.pi/agent/auth.json" 2>/dev/null; then return 0; fi
+    echo >&2 "ERROR: no auth configured. Set ENMAAS_API_KEY, or run 'pi' and use /login."
     return 1
 }
 

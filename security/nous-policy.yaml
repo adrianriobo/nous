@@ -3,14 +3,14 @@ version: 1
 # OpenShell network policy for nous.
 #
 # OpenShell denies all outbound by default. This policy allows only what
-# nous needs: Vertex AI inference, Google auth, and GitHub for PR clones.
+# nous needs: EnMaaS inference and GitHub for PR clones.
 #
 # Web search (DuckDuckGo) is intentionally excluded — see nous-policy-websearch.yaml.
 #
 # Apply at sandbox creation:
 #   openshell sandbox create \
-#     --from ghcr.io/aipcc/nous:latest \
-#     --provider vertex-nous \
+#     --from ghcr.io/adrianriobo/nous:latest \
+#     --provider enmaas-nous \
 #     --policy ./security/nous-policy.yaml
 #
 # Update a running sandbox:
@@ -31,72 +31,13 @@ filesystem_policy:
 
 network_policies:
 
-  # ── Vertex AI inference (global + per-region) ─────────────────────────────
-  # Add or remove regions to match your CLOUD_ML_REGION setting.
-  vertex-ai-global:
+  # ── EnMaaS inference + model discovery ────────────────────────────────────
+  # The gateway serves chat completions and the /v1/models list used by the
+  # router at boot. Override the endpoint with ENMAAS_BASE_URL when a mirror
+  # is used, and update the host here to match.
+  enmaas:
     endpoints:
-      - host: aiplatform.googleapis.com
-        port: 443
-        protocol: rest
-        access: full
-        enforcement: enforce
-    binaries:
-      - path: /usr/bin/node-26
-
-  vertex-ai-us-east5:
-    endpoints:
-      - host: us-east5-aiplatform.googleapis.com
-        port: 443
-        protocol: rest
-        access: full
-        enforcement: enforce
-    binaries:
-      - path: /usr/bin/node-26
-
-  vertex-ai-us-central1:
-    endpoints:
-      - host: us-central1-aiplatform.googleapis.com
-        port: 443
-        protocol: rest
-        access: full
-        enforcement: enforce
-    binaries:
-      - path: /usr/bin/node-26
-
-  vertex-ai-europe-west1:
-    endpoints:
-      - host: europe-west1-aiplatform.googleapis.com
-        port: 443
-        protocol: rest
-        access: full
-        enforcement: enforce
-    binaries:
-      - path: /usr/bin/node-26
-
-  vertex-ai-asia-southeast1:
-    endpoints:
-      - host: asia-southeast1-aiplatform.googleapis.com
-        port: 443
-        protocol: rest
-        access: full
-        enforcement: enforce
-    binaries:
-      - path: /usr/bin/node-26
-
-  # ── Google auth / token refresh ───────────────────────────────────────────
-  google-auth:
-    endpoints:
-      - host: oauth2.googleapis.com
-        port: 443
-        protocol: rest
-        access: full
-        enforcement: enforce
-      - host: iamcredentials.googleapis.com
-        port: 443
-        protocol: rest
-        access: full
-        enforcement: enforce
-      - host: accounts.google.com
+      - host: api.enmaas.devshift.net
         port: 443
         protocol: rest
         access: full

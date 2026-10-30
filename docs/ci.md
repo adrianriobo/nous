@@ -32,7 +32,7 @@ Image is tagged with:
 
 ## Integration Test (`integration.yaml`)
 
-Triggers on push to `main` and pull requests. Runs the full agent stack without real Vertex AI credentials.
+Triggers on push to `main` and pull requests. Runs the full agent stack without real EnMaaS credentials.
 
 ```
   PR / push to main
@@ -45,8 +45,8 @@ Triggers on push to `main` and pull requests. Runs the full agent stack without 
   (curl installer → systemd user service)
         │
         ▼
-  start tests/mock-vertex-server.mjs on :4010
-  (returns valid Anthropic SSE stream, no API key)
+  start tests/mock-enmaas-server.mjs on :4010
+  (returns valid OpenAI SSE stream, no API key)
         │
         ▼
   resolve runner host IP
@@ -58,7 +58,7 @@ Triggers on push to `main` and pull requests. Runs the full agent stack without 
   openshell sandbox create \
     --from nous:test \
     --policy /tmp/nous-policy-integration-test.yaml \
-    --env VERTEX_API_BASE_URL=http://<runner-ip>:4010 \
+    --env ENMAAS_BASE_URL=http://<runner-ip>:4010/v1 \
     --no-keep \
     -- pi --print -
         │
@@ -73,27 +73,25 @@ Triggers on push to `main` and pull requests. Runs the full agent stack without 
 
 ---
 
-## Mock Vertex server
+## Mock EnMaaS server
 
-`tests/mock-vertex-server.mjs` is a minimal Node.js HTTP server (no external dependencies) that accepts any POST and returns a valid Anthropic SSE stream:
+`tests/mock-enmaas-server.mjs` is a minimal Node.js HTTP server (no external dependencies) that serves the OpenAI-compatible endpoints pi uses: `GET /v1/models` for tier discovery and `POST /v1/chat/completions` with an OpenAI SSE stream:
 
 ```
-data: {"type":"message_start", ...}
-data: {"type":"content_block_start", ...}
-data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"H"}}
+data: {"object":"chat.completion.chunk","choices":[{"delta":{"role":"assistant"}}], ...}
+data: {"object":"chat.completion.chunk","choices":[{"delta":{"content":"H"}}], ...}
 ... (streams character by character)
-data: {"type":"content_block_stop", ...}
-data: {"type":"message_delta","delta":{"stop_reason":"end_turn"}, ...}
-data: {"type":"message_stop"}
+data: {"object":"chat.completion.chunk","choices":[{"delta":{},"finish_reason":"stop"}], ...}
+data: {"object":"chat.completion.chunk","choices":[],"usage":{...}}
 ```
 
 Override the response text with `MOCK_RESPONSE=<text>`. Port defaults to `4010`.
 
 ---
 
-## `VERTEX_API_BASE_URL`
+## `ENMAAS_BASE_URL`
 
-When this env var is set inside the container, `vertex-api-patch.ts` replaces the Vertex AI base URL with the provided value and skips Google auth token fetch entirely. This is what lets the integration test work without credentials.
+When this env var is set inside the container, the router extension registers the EnMaaS provider against this base URL instead of the production gateway. This is what lets the integration test work without credentials.
 
 **Never set this in production.**
 
