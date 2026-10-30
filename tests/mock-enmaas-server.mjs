@@ -70,8 +70,14 @@ function usageChunk(model, promptTokens, completionTokens) {
   };
 }
 
+// OpenAI SSE terminator. The pi OpenAI-completions client parses this stream
+// with the official `openai` SDK. The SDK needs the sentinel event to close the
+// stream cleanly: without it pi reports "malformed server-sent event JSON" and
+// ends the turn with stopReason "error".
+const SSE_DONE = "data: [DONE]\n\n";
+
 function finishStream(res) {
-  res.write("data:\n\n");
+  res.write(SSE_DONE);
   res.end();
 }
 

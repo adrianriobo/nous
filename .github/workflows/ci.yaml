@@ -229,10 +229,7 @@ jobs:
   # Fast sanity check: runs pi with a plain mock EnMaaS response via podman.
   # Verifies the container starts, auth bypass works, and pi produces output.
   # Full egress enforcement is validated in the openshell-egress job.
-  # TODO(enmaas): disabled during the Vertex to EnMaaS migration.
-  # Reason: functional smoke — needs the mock SSE stream fix. Re-enable after updating tests/mock-enmaas-server.mjs.
   functional:
-    if: false # skip: mock EnMaaS SSE stream needs a fix
     name: Functional — Smoke Test (pi + mock EnMaaS)
     needs: build
     runs-on: ubuntu-26.04
@@ -287,10 +284,7 @@ jobs:
   #   3. tools appear in logs as registered first-class pi functions
   #   4. hint field overrides the routing prefix in tool descriptions
   # Uses a local mock MCP server — no external services required.
-  # TODO(enmaas): disabled during the Vertex to EnMaaS migration.
-  # Reason: MCP discovery — needs the mock SSE stream fix. Re-enable after updating tests/mock-enmaas-server.mjs.
   mcp-discovery:
-    if: false # skip: mock EnMaaS SSE stream needs a fix
     name: MCP — Tool Discovery
     needs: build
     runs-on: ubuntu-26.04
@@ -367,10 +361,7 @@ jobs:
   # ── Productization skills smoke test ──────────────────────────────────────
   # Verifies the nous-productization image ships the skills directory and tool
   # binaries installed by the skills-builder stage.
-  # TODO(enmaas): disabled during the Vertex to EnMaaS migration.
-  # Reason: skills smoke — needs the mock SSE stream fix. Re-enable after updating tests/mock-enmaas-server.mjs.
   skills-smoke:
-    if: false # skip: mock EnMaaS SSE stream needs a fix
     name: Skills — Productization Image
     needs: build
     runs-on: ubuntu-26.04
@@ -529,10 +520,7 @@ jobs:
   #   1. wiki tools are registered at boot (log line present)
   #   2. wiki_search executes and returns a result (via wiki_search scenario)
   #   3. wiki_ingest creates a file in raw/assets/
-  # TODO(enmaas): disabled during the Vertex to EnMaaS migration.
-  # Reason: wiki integration — needs the mock SSE stream fix. Re-enable after updating tests/mock-enmaas-server.mjs.
   wiki-integration:
-    if: false # skip: mock EnMaaS SSE stream needs a fix
     name: Wiki — OKF 2.0 Integration
     needs: build
     runs-on: ubuntu-26.04
