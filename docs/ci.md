@@ -10,6 +10,7 @@ The build job creates both image targets. It runs container structure tests and 
 | Policy Validation | Validate the default and web-search OpenShell policies. |
 | Functional — Smoke Test | Run pi in the base image against a mock EnMaaS server. |
 | Subagents — Model and Safety Tests | Test subagent roles and limits in the base image. |
+| Router — Model Selection Tests | Test hosted routing, paid escalation, and retries in the base image. |
 | MCP — Tool Discovery | Test MCP discovery with mock servers. |
 | Skills — Productization Image | Check productization skills and selected tools. |
 | OpenShell Egress Enforcement | Test allowed and blocked network access. |
@@ -23,9 +24,10 @@ CI publishes both images on pushes to `main` and version tags. It also publishes
 
 ## Run tests locally
 
-Run the subagent tests with a compatible Node.js and pi installation:
+Run the router and subagent tests with a compatible Node.js and pi installation:
 
 ```bash
+node --test tests/router.test.mjs
 node --test --test-timeout=30000 tests/subagent.test.mjs
 ```
 

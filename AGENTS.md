@@ -24,7 +24,7 @@ Use [`context/APPEND_SYSTEM.md`](context/APPEND_SYSTEM.md) for the common instru
 
 ## Important limits
 
-- The main router can select paid models. See [model routing](docs/architecture.md#model-routing).
+- The main router escalates to paid models without a dialog. Set `NOUS_PAID_ESCALATION=off` to block it. See [model routing](docs/architecture.md#model-routing).
 - Subagent tool lists are not security sandboxes. Child processes share the parent environment.
 - The OpenShell network policies apply only when you run the agent in OpenShell.
 - Productization tool installers can fail without failing the image build.

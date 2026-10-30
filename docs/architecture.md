@@ -6,7 +6,7 @@ nous extends [pi](https://github.com/earendil-works/pi) with an EnMaaS provider,
 
 The default session model is `router/auto`. At startup, nous queries the EnMaaS model list. It keeps the listed tier candidates and the locally pinned hosted models. If discovery fails, it uses the configured fallback tiers.
 
-The router selects models from the discovered tiers. It uses a cheap model for trivial requests and after a write-like tool call. For a nontrivial planning request, it selects the **last available tier**. A retry selects the next tier up, subject to the last tier.
+The router selects models from the discovered tiers. Automatic work starts on a hosted model. It uses a cheap model for trivial requests and after a write-like tool call. For a nontrivial planning request, it uses GLM 5.3. A retry moves to the next hosted model.
 
 The configured tier order is:
 
@@ -15,11 +15,17 @@ The configured tier order is:
 3. GPT 5.4 Mini — paid model.
 4. GPT 6.1 Terra — paid model.
 
-**Cost warning:** When a paid model is the last discovered tier, normal nontrivial planning can select it. Manual tier selection and retries can also select paid models. The confirmation for a paid subagent does not apply to the main router. Check gateway billing and the discovered tiers before use.
+### Paid escalation
+
+The router can escalate automatic work to a paid model. It does this in two cases. The first case is a very complex request. The second case is a retry after the router tried all hosted models. The router shows the escalation in its status line. Escalation needs no dialog, so it also works in print mode.
+
+Set `NOUS_PAID_ESCALATION=off` to keep automatic routing on hosted models. In that mode, a very complex request stays on GLM 5.3, and an exhausted retry repeats the last hosted model. The default value is `auto`.
+
+A manual selection can always use a paid model. A `high` thinking level selects the last tier. A `/model` selection uses the model that you choose. The advanced subagent keeps its own confirmation. Check gateway billing limits before you enable automatic escalation.
 
 The hosted models are pinned because the gateway model list can omit them. For a new route, `low`, `medium`, and `high` thinking selections map to tier positions. The router passes thinking as `off` to the selected model. The gateway provides the actual billing information; pi's catalog reports zero cost. The router uses the Responses API for OpenAI-family models. The hosted models use chat completions.
 
-The router's phase and complexity decisions are heuristics. Trivial requests have fewer than 20 words and no matching technical keyword. A write-like tool call can switch a continuation to the implementation phase. These rules do not guarantee the best model for every task. See [`model.ts`](../context/router/model.ts) and [`enmaas.ts`](../context/router/enmaas.ts) for the current rules and catalog.
+The router's phase and complexity decisions are heuristics. Trivial requests have fewer than 20 words and no matching technical keyword. A write-like tool call can switch a continuation to the implementation phase. A very complex request has at least 120 words and a design keyword, or at least 60 words and four file names. These rules do not guarantee the best model for every task. See [`model.ts`](../context/router/model.ts) and [`enmaas.ts`](../context/router/enmaas.ts) for the current rules and catalog.
 
 ## Subagents
 
