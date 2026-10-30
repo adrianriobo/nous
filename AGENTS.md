@@ -46,9 +46,9 @@ The provider (`enmaas`) is registered by the router extension at boot. The gatew
       ▼
   router.ts → selects tier based on complexity + phase
       │
-      ├─ trivial / implement phase → gemini-3.8-flash
-      ├─ plan phase (default)      → gpt-6.1-terra
-      └─ retry / escalation        → step up one tier (flash → mini → glm → terra)
+      ├─ trivial / implement phase → DeepSeek V4.1 Flash (free)
+      ├─ plan phase (default)      → GLM 5.3 (free)
+      └─ retry / escalation        → step up one tier (deepseek → glm → mini → terra)
             │
             ▼
   enmaas provider (openai-completions)  →  api.enmaas.devshift.net
@@ -58,11 +58,11 @@ The provider (`enmaas`) is registered by the router extension at boot. The gatew
 
 At startup, `discoverTiers()` calls `GET /v1/models` on the EnMaaS gateway with the API key. Every tier candidate the gateway lists is considered available. The list keeps the candidate order, cheapest → most-capable, so the router can step through tiers on retry.
 
-If the API key is missing or the probe fails, the router falls back to `FALLBACK_TIERS` (Gemini Flash → GPT 5.4 Mini → GLM 5.3 → GPT 6.1 Terra).
+If the API key is missing or the probe fails, the router falls back to `FALLBACK_TIERS` (DeepSeek Flash → GLM 5.3 → GPT 5.4 Mini → GPT 6.1 Terra).
 
 Boot log example:
 ```
-[nous] router: discovered tiers — [0]gemini-3.8-flash, [1]gpt-5.4-mini, [2]rits/zai-org/glm-5-3, [3]gpt-6.1-terra
+[nous] router: discovered tiers — [0]rits/deepseek-ai/DeepSeek-V4.1-Flash-1017, [1]rits/zai-org/glm-5-3, [2]gpt-5.4-mini, [3]gpt-6.1-terra
 ```
 
 To add a new candidate model, add it to `TIER_CANDIDATES` in `context/router/enmaas.ts` (cheapest first). It will be probed automatically on next boot.
@@ -73,30 +73,37 @@ The router implements a two-phase strategy:
 
 | Phase | Trigger | Model |
 |---|---|---|
-| Plan | All new turns and continuations | GPT 6.1 Terra (default) or Gemini 3.8 Flash (trivial only) |
-| Implement | After any write/edit/bash tool call | Gemini 3.8 Flash |
-| Escalate | On retry | Flash → Mini → GLM → Terra |
+| Plan | All new turns and continuations | GLM 5.3 (default) or DeepSeek V4.1 Flash (trivial only) |
+| Implement | After any write/edit/bash tool call | DeepSeek V4.1 Flash |
+| Escalate | On retry | DeepSeek → GLM → Mini → Terra |
 
-**Default is GPT 6.1 Terra.** Gemini 3.8 Flash is used only when a query is *trivially simple*: fewer than 20 words AND contains no technical keywords (`code`, `function`, `error`, `debug`, `explain`, `analyze`, `review`, `deploy`, `build`, …). Everything else — including short technical questions — goes to GPT 6.1 Terra.
+**Default is GLM 5.3** (hosted, free of charge). DeepSeek V4.1 Flash is used only when a query is *trivially simple*: fewer than 20 words AND contains no technical keywords (`code`, `function`, `error`, `debug`, `explain`, `analyze`, `review`, `deploy`, `build`, …). Everything else — including short technical questions — goes to GLM 5.3. Both models are free, so normal traffic costs nothing.
 
-**Implement phase** — once any write/edit/bash tool call appears in the message history, the router switches to Gemini 3.8 Flash for mechanical implementation turns. If the user then asks something complex mid-session, the plan-phase logic re-evaluates and upgrades back to GPT 6.1 Terra.
+**Implement phase** — once any write/edit/bash tool call appears in the message history, the router switches to DeepSeek V4.1 Flash for mechanical implementation turns. If the user then asks something complex mid-session, the plan-phase logic re-evaluates and upgrades back to GLM 5.3.
 
-**Retry escalation** — on each retry the router steps up one tier: Flash → Mini → GLM → Terra.
+**Retry escalation** — on each retry the router steps up one tier: DeepSeek → GLM → Mini → Terra. Paid models run only when free models fail.
 
-**Flash models** — when a Gemini Flash model is registered (3.8, 3.7, or 3.6), it is preferred for cheap turns.
+**Cheap models** — the implement phase prefers the free hosted models (DeepSeek Flash, then GLM 5.3). Paid Gemini Flash models serve only as backup.
 
-**Thinking levels** — explicit `low`/`medium`/`high` settings map to Flash/Mini/Terra regardless of complexity detection. `off` (the default) lets the router decide.
+**Thinking levels** — explicit `low`/`medium`/`high` settings map to DeepSeek/GLM/Terra regardless of complexity detection. `off` (the default) lets the router decide.
 
 ## Models
 
-| Model | Provider | Tier | Cost (input/1M) | Use |
+| Model | Provider | Tier | Charge | Use |
 |---|---|---|---|---|
-| `gemini-3.8-flash` | enmaas | 0 | $0 | Trivial queries, implement phase |
-| `gpt-5.4-mini` | enmaas | 1 | $0 | Retry escalation intermediate |
-| `rits/zai-org/glm-5-3` | enmaas | 2 | $0 | Strong open-weight tier |
-| `gpt-6.1-terra` | enmaas | 3 | $0 | **Default plan phase** |
+| `rits/deepseek-ai/DeepSeek-V4.1-Flash-1017` | enmaas | 0 | **free** (hosted) | Trivial queries, implement phase |
+| `rits/zai-org/glm-5-3` | enmaas | 1 | **free** (hosted) | **Default plan phase** |
+| `gpt-5.4-mini` | enmaas | 2 | paid | Retry escalation |
+| `gpt-6.1-terra` | enmaas | 3 | paid | Retry escalation, manual high-quality selection |
 
-Costs are zero: the internal gateway meters usage downstream, not through pi. The full catalog is declared in `context/router/enmaas.ts`. When the gateway adds models, add them to `CATALOG` there and update this table.
+GLM 5.3 and DeepSeek V4.1 Flash are hosted open-weight models and are free of charge. They take the bottom tiers and the plan-phase default, which keeps monthly spend near zero under the strict budget limit. Paid frontier models run only on retry escalation or manual `--model` selection. The gateway also keeps GLM 5.3 available after the monthly budget is exhausted.
+
+Hosted model limits (from the gateway documentation):
+
+- `rits/zai-org/glm-5-3`: 1,000,000-token context window (must not be larger in the client), 65,536-token maximum output, text-only. Frequency and presence penalties must stay 0 — non-zero values make GLM drift into Chinese.
+- `rits/deepseek-ai/DeepSeek-V4.1-Flash-1017`: do not copy GLM context-window, penalty, or capability settings to DeepSeek.
+
+The full catalog is declared in `context/router/enmaas.ts`. Hosted models are pinned in `HOSTED_MODEL_IDS` because the `/v1/models` response is credential-dependent and can omit them. When the gateway adds models, add them to `CATALOG` there and update this table.
 
 ## Personal knowledge wiki (OKF 2.0)
 
