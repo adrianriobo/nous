@@ -1,10 +1,10 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { discoverTools, callMcpToolSSE, callMcpToolStreamable, type DiscoveryResult } from "./router/mcp";
-import { ddgSearch } from "./router/search";
-import { registerEnmaasProvider, discoverTiers } from "./router/enmaas";
-import { registerRouter } from "./router/model";
-import { registerSubagent } from "./router/subagent";
-import { wikiSearch, wikiRead, wikiIngest, WIKI_PATH } from "./router/wiki";
+import { discoverTools, callMcpToolSSE, callMcpToolStreamable, type DiscoveryResult } from "./mcp";
+import { ddgSearch } from "./search";
+import { registerEnmaasProvider, discoverTiers } from "./enmaas";
+import { registerRouter } from "./model";
+import { registerSubagent } from "./subagent";
+import { wikiSearch, wikiRead, wikiIngest, WIKI_PATH } from "./wiki";
 import { existsSync } from "fs";
 
 export default async function (pi: ExtensionAPI) {

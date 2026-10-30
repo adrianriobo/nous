@@ -87,14 +87,7 @@ ENV HOME=/sandbox
 ENV PATH="/sandbox/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 ENV AGENT_NAME=pi
 
-COPY --chown=1001:0 context/router/index.ts /sandbox/.pi/agent/extensions/router.ts
-COPY --chown=1001:0 context/router/enmaas.ts /sandbox/.pi/agent/extensions/router/enmaas.ts
-COPY --chown=1001:0 context/router/mcp.ts   /sandbox/.pi/agent/extensions/router/mcp.ts
-COPY --chown=1001:0 context/router/search.ts /sandbox/.pi/agent/extensions/router/search.ts
-COPY --chown=1001:0 context/router/model.ts  /sandbox/.pi/agent/extensions/router/model.ts
-COPY --chown=1001:0 context/router/subagent.ts /sandbox/.pi/agent/extensions/router/subagent.ts
-COPY --chown=1001:0 context/router/subagent-provider.ts /sandbox/.pi/agent/extensions/router/subagent-provider.ts
-COPY --chown=1001:0 context/router/wiki.ts   /sandbox/.pi/agent/extensions/router/wiki.ts
+COPY --chown=1001:0 context/router/ /sandbox/.pi/agent/extensions/router/
 COPY --chown=1001:0 context/settings.json /sandbox/.pi/agent/settings.json
 COPY --chown=1001:0 context/APPEND_SYSTEM.md /sandbox/.pi/agent/APPEND_SYSTEM.md
 
