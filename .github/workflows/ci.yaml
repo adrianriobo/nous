@@ -273,6 +273,30 @@ jobs:
             || { echo "FAIL: expected 'hello' in output"; exit 1; }
           echo "PASS: pi started and responded"
 
+      - name: Stop mock server
+        if: always()
+        run: kill "$MOCK_PID" 2>/dev/null || true
+
+  # ── Subagent tests ─────────────────────────────────────────────────────────
+  subagent-tests:
+    name: Subagents — Model and Safety Tests
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: nous-image
+          path: /tmp
+
+      - name: Load image
+        run: podman load -i /tmp/nous-test.tar
+
       - name: Run subagent tests
         run: |
           podman run --rm --network=host \
@@ -280,10 +304,6 @@ jobs:
             -v "$PWD:/workspace/nous:ro,z" \
             -w /workspace/nous \
             nous:test -c 'node --test --test-timeout=30000 tests/subagent.test.mjs'
-
-      - name: Stop mock server
-        if: always()
-        run: kill "$MOCK_PID" 2>/dev/null || true
 
   # ── MCP tool discovery ─────────────────────────────────────────────────────
   # Verifies the full MCP injection pipeline:
