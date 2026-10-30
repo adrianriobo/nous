@@ -10,9 +10,9 @@ tags: [agent, pi, enmaas, coding]
 nous is a production-ready coding agent built on [pi](https://github.com/earendil-works/pi) with
 EnMaaS integration. It automatically selects the right model for each task:
 
-- **GPT 6.1 Terra** for plan-phase turns (default)
-- **Gemini 3.8 Flash** for trivial queries and mechanical implementation
-- **GPT 5.4 Mini** and **GLM 5.3** for retry escalation
+- **GLM 5.3** for plan-phase turns (default, free hosted model)
+- **DeepSeek V4.1 Flash** for trivial queries and mechanical implementation (free hosted model)
+- **GPT 5.4 Mini** and **GPT 6.1 Terra** for retry escalation (paid)
 
 ## Key features
 

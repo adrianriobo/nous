@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { FLASH_CANDIDATES, type Tier } from "./enmaas";
+import { CHEAP_CANDIDATES, type Tier } from "./enmaas";
 
 // Routing logic for the virtual router/auto model. Tier layout:
 //   tiers[0]             = cheapest (implement phase, trivial queries)
@@ -50,22 +50,22 @@ export function hasWritten(messages: readonly any[]): boolean {
 export function registerRouter(pi: ExtensionAPI, tiers: Tier[]) {
   // Tier layout: tiers[0] = cheapest, tiers[tiers.length-1] = best/default
   const lastIdx = tiers.length - 1;
-  let flashModel: any = undefined;
-  let flashId = "";
+  let cheapModelCache: any = undefined;
+  let cheapId = "";
 
-  function resolveFlash(ctx: any): { model: any; id: string } | null {
-    if (flashModel === undefined) {
-      for (const c of FLASH_CANDIDATES) {
+  function resolveCheap(ctx: any): { model: any; id: string } | null {
+    if (cheapModelCache === undefined) {
+      for (const c of CHEAP_CANDIDATES) {
         const m = ctx.modelRegistry.find(c.provider, c.id);
-        if (m) { flashModel = m; flashId = c.id; break; }
+        if (m) { cheapModelCache = m; cheapId = c.id; break; }
       }
-      if (flashModel === undefined) flashModel = null;
+      if (cheapModelCache === undefined) cheapModelCache = null;
     }
-    return flashModel ? { model: flashModel, id: flashId } : null;
+    return cheapModelCache ? { model: cheapModelCache, id: cheapId } : null;
   }
 
   function cheapModel(ctx: any): { model: any; id: string } {
-    const f = resolveFlash(ctx);
+    const f = resolveCheap(ctx);
     if (f) return f;
     const t = tiers[0];
     const m = ctx.modelRegistry.find(t.provider, t.id);

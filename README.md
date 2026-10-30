@@ -8,7 +8,7 @@
 
 ## What you get
 
-**Smart model routing** — automatically picks the right model for each task. Default is GPT 6.1 Terra for all plan-phase turns; Gemini 3.8 Flash for trivial queries and mechanical implementation. Available models are self-discovered from the EnMaaS gateway at boot — no configuration needed.
+**Smart model routing** — automatically picks the right model for each task. Default is GLM 5.3 (free hosted model) for plan-phase turns; DeepSeek V4.1 Flash (free) for trivial queries and mechanical implementation. Paid frontier models serve retry escalation only. Available models are self-discovered from the EnMaaS gateway at boot — no configuration needed.
 
 **Web search** — DuckDuckGo search built in. The agent searches the web when it needs current information without you having to ask.
 

@@ -33,6 +33,7 @@ function m(
   contextWindow: number,
   maxTokens: number,
   compat?: Record<string, unknown>,
+  extra?: Record<string, unknown>,
 ) {
   return {
     id,
@@ -43,6 +44,7 @@ function m(
     contextWindow,
     maxTokens,
     ...(compat ? { compat } : {}),
+    ...(extra ? extra : {}),
   };
 }
 
@@ -73,30 +75,48 @@ const CATALOG = [
   m("gemini-3.7-flash", "Gemini 3.7 Flash (EnMaaS)", true, 1_048_576, 65_536),
   m("gemini-3.6-flash", "Gemini 3.6 Flash (EnMaaS)", true, 1_048_576, 65_536),
   // Open-weight family
-  m("rits/zai-org/glm-5-3", "GLM 5.3 (EnMaaS)", true, 1_048_576, 65_536, NO_DEVELOPER_ROLE),
-  m("rits/deepseek-ai/DeepSeek-V4.1-Flash-1017", "DeepSeek V4.1 Flash (EnMaaS)", false, 131_072, 16_384, NO_DEVELOPER_ROLE),
+  // Hosted model, free of charge. Context window must not exceed 1,000,000
+  // (gateway limit). Penalties must stay 0: non-zero values make GLM drift
+  // into Chinese.
+  m("rits/zai-org/glm-5-3", "GLM 5.3 (EnMaaS)", true, 1_000_000, 65_536, NO_DEVELOPER_ROLE, {
+    samplingParams: { frequency_penalty: 0, presence_penalty: 0 },
+  }),
+  // Hosted model, free of charge. Do not copy GLM context-window, penalty,
+  // or capability settings here.
+  m("rits/deepseek-ai/DeepSeek-V4.1-Flash-1017", "DeepSeek V4.1 Flash (EnMaaS)", false, 128_000, 16_384, NO_DEVELOPER_ROLE),
 ];
 
 // ── Routing tiers ─────────────────────────────────────────────────────────────
-// Candidates ordered cheapest → most-capable. discoverTiers() keeps only the
-// models the gateway confirms and preserves this order, so index 0 = cheap
-// (implement phase) and the last entry = best (plan-phase default).
+// Candidates ordered cheapest → most-capable. The gateway hosts GLM 5.3 and
+// DeepSeek V4.1 Flash free of charge, so they take the bottom tiers and the
+// plan-phase default. Paid frontier models serve only as retry escalation or
+// manual `--model` selection. This keeps monthly spend near zero under the
+// strict budget limit.
+
+// Hosted models are pinned locally: the /v1/models response is
+// credential-dependent and can omit them even when inference works.
+export const HOSTED_MODEL_IDS = new Set([
+  "rits/zai-org/glm-5-3",
+  "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+]);
 
 export const TIER_CANDIDATES: Tier[] = [
-  { provider: PROVIDER_ID, id: "gemini-3.8-flash" },      // cheap, fast
-  { provider: PROVIDER_ID, id: "gpt-5.4-mini" },          // mid tier
-  { provider: PROVIDER_ID, id: "rits/zai-org/glm-5-3" },  // strong open-weight
-  { provider: PROVIDER_ID, id: "gpt-6.1-terra" },         // best — plan default
+  { provider: PROVIDER_ID, id: "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017" }, // free, fast
+  { provider: PROVIDER_ID, id: "rits/zai-org/glm-5-3" },                      // free — plan default
+  { provider: PROVIDER_ID, id: "gpt-5.4-mini" },                              // paid — escalation
+  { provider: PROVIDER_ID, id: "gpt-6.1-terra" },                             // paid — escalation, manual high
 ];
 
 // Used when discovery cannot run (no key, network unavailable, timeout).
 export const FALLBACK_TIERS: Tier[] = TIER_CANDIDATES;
 
-// Flash models preferred for the implement phase (cheapest usable turns).
-export const FLASH_CANDIDATES: Tier[] = [
+// Cheap candidates preferred for the implement phase. Free hosted models
+// first; paid flash models only as backup.
+export const CHEAP_CANDIDATES: Tier[] = [
+  { provider: PROVIDER_ID, id: "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017" },
+  { provider: PROVIDER_ID, id: "rits/zai-org/glm-5-3" },
   { provider: PROVIDER_ID, id: "gemini-3.8-flash" },
   { provider: PROVIDER_ID, id: "gemini-3.7-flash" },
-  { provider: PROVIDER_ID, id: "gemini-3.6-flash" },
 ];
 
 // ── Boot-time model discovery ──────────────────────────────────────────────────
@@ -132,7 +152,9 @@ export async function discoverTiers(): Promise<Tier[]> {
     const data = await res.json() as any;
     const ids = new Set<string>((data.data ?? data.models ?? []).map((x: any) => x.id));
 
-    const available = TIER_CANDIDATES.filter((c) => ids.has(c.id));
+    // Keep a candidate when the gateway lists it, or when it is a pinned
+    // hosted model (the catalog is credential-dependent and can omit those).
+    const available = TIER_CANDIDATES.filter((c) => ids.has(c.id) || HOSTED_MODEL_IDS.has(c.id));
     if (available.length === 0) {
       process.stderr.write("[nous] router: gateway lists no tier candidates — using fallback tiers\n");
       return FALLBACK_TIERS;
