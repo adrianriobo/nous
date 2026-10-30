@@ -1,0 +1,75 @@
+version: 1
+
+# OpenShell network policy for nous with Slack thread research enabled.
+#
+# Extends nous-policy.yaml by adding the Slack Web API as a read-only endpoint.
+# Use this policy only when the slack-researcher subagent needs Slack access.
+# Slack threads can contain confidential data. Confirm that the approved model
+# endpoint may receive that data.
+#
+# Apply:
+#   openshell sandbox create \
+#     --from ghcr.io/adrianriobo/nous:latest \
+#     --provider enmaas-nous \
+#     --policy ./security/nous-policy-slack.yaml
+
+# Pi reads its runtime from /opt/pi (base image install). Landlock blocks
+# access to paths not listed here or in the automatic baseline (/usr, /lib,
+# /etc, /tmp). include_workdir keeps /sandbox read-write.
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /opt/pi
+    - /run/secrets
+
+network_policies:
+
+  # ── EnMaaS inference + model discovery ────────────────────────────────────
+  # Replace enmaas-gateway.example.com with the host from ENMAAS_BASE_URL.
+  enmaas:
+    endpoints:
+      - host: enmaas-gateway.example.com
+        port: 443
+        protocol: rest
+        access: full
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  # ── GitHub — git clone for PR code reviews ────────────────────────────────
+  github-git:
+    endpoints:
+      - host: github.com
+        port: 443
+        enforcement: enforce
+      - host: codeload.github.com
+        port: 443
+        enforcement: enforce
+      - host: objects.githubusercontent.com
+        port: 443
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/git
+
+  github-api:
+    endpoints:
+      - host: api.github.com
+        port: 443
+        protocol: rest
+        access: read-only
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26
+
+  # ── Slack Web API — read thread replies only ──────────────────────────────
+  # The slack_thread tool calls conversations.replies on this endpoint.
+  # The tool has no post, edit, or delete operation.
+  slack-api:
+    endpoints:
+      - host: slack.com
+        port: 443
+        protocol: rest
+        access: read-only
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node-26

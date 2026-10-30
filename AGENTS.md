@@ -180,7 +180,7 @@ Typical flow for a GitHub PR review:
 
 ### `subagent`
 
-Use the `scout` or `reviewer` role when the user explicitly requests delegation. Use `advanced-reviewer` only after the user confirms the paid invocation. The child uses a separate pi process with read-only tools. It shares the parent filesystem and operating-system permissions. Verify its output before use. See [subagents](docs/subagents.md) for limits and security details.
+Use the `scout` or `reviewer` role when the user explicitly requests delegation. Use `advanced-reviewer` only after the user confirms the paid invocation. Use `wiki-researcher` for large wiki questions. Use `slack-researcher` for one Slack thread. The child uses a separate pi process with read-only tools. It shares the parent filesystem and operating-system permissions. Verify its output before use. See [subagents](docs/subagents.md) for limits and security details.
 
 ## Productization skills (`nous-productization`)
 

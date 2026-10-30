@@ -37,6 +37,14 @@ fileExistenceTests:
     path: "/sandbox/.pi/agent/extensions/router/subagent-provider.ts"
     shouldExist: true
 
+  - name: "subagent research tools"
+    path: "/sandbox/.pi/agent/extensions/router/subagent-tools.ts"
+    shouldExist: true
+
+  - name: "Slack thread reader"
+    path: "/sandbox/.pi/agent/extensions/router/slack.ts"
+    shouldExist: true
+
 fileContentTests:
   - name: "entrypoint handles interactive and passthrough modes"
     path: "/usr/local/bin/entrypoint.sh"
