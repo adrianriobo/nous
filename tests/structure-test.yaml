@@ -29,6 +29,14 @@ fileExistenceTests:
     path: "/sandbox"
     shouldExist: true
 
+  - name: "router extension entry point"
+    path: "/sandbox/.pi/agent/extensions/router/index.ts"
+    shouldExist: true
+
+  - name: "subagent provider extension"
+    path: "/sandbox/.pi/agent/extensions/router/subagent-provider.ts"
+    shouldExist: true
+
 fileContentTests:
   - name: "entrypoint handles interactive and passthrough modes"
     path: "/usr/local/bin/entrypoint.sh"
