@@ -1,6 +1,8 @@
 # CI and tests
 
-[`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml) runs on pull requests to `main`, pushes to `main`, and version tags. The build job creates both image targets. It runs container structure tests and uploads image artifacts for the other jobs.
+[`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml) runs on pull requests to `main`, pushes to `main`, and version tags. Changes only to Markdown files or `docs/` do not start CI on pull requests or branch pushes. A mixed change starts CI. Version tags still start CI, regardless of the changed files.
+
+The build job creates both image targets. It runs container structure tests and uploads image artifacts for the other jobs. If branch protection requires these checks, a skipped workflow can leave them pending. Review required checks before you enable branch protection.
 
 | Check | Purpose |
 |---|---|

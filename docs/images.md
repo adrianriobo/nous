@@ -15,7 +15,7 @@ The skills builder attempts to install its CLI tools. Examples include `gh`, `gl
 
 ## Tags
 
-On a push to `main`, CI publishes `latest` and the commit SHA for the base image. A version-tag build publishes the version, commit SHA, and `latest` tags. The productization image uses a tag that combines the skills version and the nous version or commit SHA. For example, `0.9.1-0.3.0` identifies skills `v0.9.1` and nous `v0.3.0`.
+On a push to `main` that starts CI, the workflow publishes `latest` and the commit SHA for the base image. Documentation-only branch pushes do not start CI. A version-tag build publishes the version, commit SHA, and `latest` tags. The productization image uses a tag that combines the skills version and the nous version or commit SHA. For example, `0.9.1-0.3.0` identifies skills `v0.9.1` and nous `v0.3.0`.
 
 For a pull request from this repository, CI also pushes PR-specific tags. Fork pull requests build images but do not push them. See [CI](ci.md) for the current workflow.
 
