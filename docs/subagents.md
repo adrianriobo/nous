@@ -50,7 +50,7 @@ Use the main session to make the final decision. Use the reviewer or advanced re
 
 ## Slack researcher
 
-The Slack researcher reads one thread and its replies. It returns decisions, owners, dates, open questions, and message links. The result identifies incomplete retrieval and access errors.
+The Slack researcher reads one thread and its replies. It is instructed to return decisions, owners, dates, open questions, and message links. It is instructed to report access errors and incomplete retrieval.
 
 Give the channel ID and the thread timestamp. A thread URL contains both values:
 
@@ -59,7 +59,7 @@ Give the channel ID and the thread timestamp. A thread URL contains both values:
 - Channel ID: `C08LVA9E1SS`
 - Thread timestamp: `1769005300.000000`
 
-The timestamp has six digits after the decimal point. Add the three trailing zeros of the URL value as shown.
+The timestamp has six digits after the decimal point. Insert the decimal point before the final six digits of the URL value.
 
 The reader needs these environment variables:
 
@@ -71,7 +71,7 @@ The reader uses `https://slack.com/api`. Set `SLACK_API_BASE` only for a test se
 
 Slack threads can contain confidential data. Send them only to a model that your organization approves for that data. The child sends the thread text to the EnMaaS gateway.
 
-The default limits are 100 messages and 200 messages maximum. Each message is limited to 1,500 characters. The complete result is limited to 24,000 characters.
+The default limit is 100 messages. The maximum is 200 messages. Each message is limited to 1,500 characters. The complete result is limited to 24,000 characters. The reader may omit messages when a limit is reached, without reporting every omission. Verify the source thread when completeness matters.
 
 ## Execution limits
 
