@@ -53,25 +53,36 @@ function m(
 // Open-weight models reject the developer role — send system instead.
 const NO_DEVELOPER_ROLE = { supportsDeveloperRole: false };
 
+// OpenAI-family models must use the Responses API on this gateway. Chat
+// completions rejects function tools combined with any reasoning_effort
+// other than 'none' — and rejects a missing reasoning_effort too, because
+// the model default is non-none. Since a coding agent always sends tools,
+// /v1/responses is the only dialect that supports tools and reasoning
+// together for these models (verified against the gateway).
+const RESPONSES = { api: "openai-responses" };
+
 const CATALOG = [
   // OpenAI family
-  m("gpt-6.1-terra", "GPT 6.1 Terra (EnMaaS)", true, 1_048_576, 65_536),
-  m("gpt-6.1-sol", "GPT 6.1 Sol (EnMaaS)", true, 1_048_576, 65_536),
-  m("gpt-6-astra", "GPT 6 Astra (EnMaaS)", true, 1_048_576, 65_536),
-  m("gpt-6-sol", "GPT 6 Sol (EnMaaS)", true, 1_048_576, 65_536),
-  m("gpt-6-luna", "GPT 6 Luna (EnMaaS)", true, 1_048_576, 65_536),
-  m("gpt-5.6-terra", "GPT 5.6 Terra (EnMaaS)", true, 1_048_576, 65_536),
-  m("gpt-5.6-sol", "GPT 5.6 Sol (EnMaaS)", true, 1_048_576, 65_536),
-  m("gpt-5.6-luna", "GPT 5.6 Luna (EnMaaS)", true, 1_048_576, 65_536),
-  m("gpt-5.5", "GPT 5.5 (EnMaaS)", true, 1_048_576, 65_536),
-  m("gpt-5.4", "GPT 5.4 (EnMaaS)", true, 1_048_576, 65_536),
-  m("gpt-5.4-mini", "GPT 5.4 Mini (EnMaaS)", true, 1_048_576, 65_536),
-  m("gpt-5.4-nano", "GPT 5.4 Nano (EnMaaS)", true, 1_048_576, 65_536),
-  m("gpt-5.3-codex", "GPT 5.3 Codex (EnMaaS)", true, 1_048_576, 65_536),
-  m("gpt-5-mini", "GPT 5 Mini (EnMaaS)", true, 131_072, 16_384),
-  m("gpt-4o-mini", "GPT 4o mini (EnMaaS)", false, 131_072, 16_384),
-  m("codex-auto-review", "Codex Auto Review (EnMaaS)", false, 1_048_576, 65_536),
-  // Gemini family
+  m("gpt-6.1-terra", "GPT 6.1 Terra (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m("gpt-6.1-sol", "GPT 6.1 Sol (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m("gpt-6-astra", "GPT 6 Astra (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m("gpt-6-sol", "GPT 6 Sol (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m("gpt-6-luna", "GPT 6 Luna (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m("gpt-5.6-terra", "GPT 5.6 Terra (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m("gpt-5.6-sol", "GPT 5.6 Sol (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m("gpt-5.6-luna", "GPT 5.6 Luna (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m("gpt-5.5", "GPT 5.5 (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m("gpt-5.4", "GPT 5.4 (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m("gpt-5.4-mini", "GPT 5.4 Mini (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m("gpt-5.4-nano", "GPT 5.4 Nano (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m("gpt-5.3-codex", "GPT 5.3 Codex (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m("gpt-5-mini", "GPT 5 Mini (EnMaaS)", true, 131_072, 16_384, undefined, RESPONSES),
+  m("gpt-4o-mini", "GPT 4o mini (EnMaaS)", false, 131_072, 16_384, undefined, RESPONSES),
+  m("codex-auto-review", "Codex Auto Review (EnMaaS)", false, 1_048_576, 65_536, undefined, RESPONSES),
+  // Gemini family. NOTE: gateway testing showed gemini chat-completions
+  // rejects the standard nested tool format ("Expected input to contain
+  // field: 'function'"). These entries stay catalog-only until the correct
+  // dialect is confirmed — the router never selects them.
   m("gemini-3.1-pro-preview", "Gemini 3.1 Pro Preview (EnMaaS)", true, 1_048_576, 65_536),
   m("gemini-3.8-flash", "Gemini 3.8 Flash (EnMaaS)", true, 1_048_576, 65_536),
   m("gemini-3.7-flash", "Gemini 3.7 Flash (EnMaaS)", true, 1_048_576, 65_536),
@@ -113,12 +124,11 @@ export const TIER_CANDIDATES: Tier[] = [
 export const FALLBACK_TIERS: Tier[] = TIER_CANDIDATES;
 
 // Cheap candidates preferred for the implement phase. Free hosted models
-// first; paid flash models only as backup.
+// only: gemini chat-completions rejects the standard tool format on this
+// gateway, so the router never routes to gemini (see catalog note above).
 export const CHEAP_CANDIDATES: Tier[] = [
   { provider: PROVIDER_ID, id: "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017" },
   { provider: PROVIDER_ID, id: "rits/zai-org/glm-5-3" },
-  { provider: PROVIDER_ID, id: "gemini-3.8-flash" },
-  { provider: PROVIDER_ID, id: "gemini-3.7-flash" },
 ];
 
 // ── Boot-time model discovery ──────────────────────────────────────────────────

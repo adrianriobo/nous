@@ -105,6 +105,8 @@ Hosted model limits (from the gateway documentation):
 
 The full catalog is declared in `context/router/enmaas.ts`. Hosted models are pinned in `HOSTED_MODEL_IDS` because the `/v1/models` response is credential-dependent and can omit them. When the gateway adds models, add them to `CATALOG` there and update this table.
 
+**API dialects.** OpenAI-family models use the Responses API (`/v1/responses`, model-level `api: "openai-responses"`). The gateway rejects function tools combined with `reasoning_effort` on `/v1/chat/completions` for these models — and rejects a missing `reasoning_effort` too, because the model default is non-none. Since a coding agent always sends tools, Responses is the only dialect that supports tools and reasoning together for them. Hosted models (GLM 5.3, DeepSeek) use chat completions. Gemini models are catalog-only: the gateway rejects the standard tool format for them on chat completions, so the router never selects them.
+
 ## Personal knowledge wiki (OKF 2.0)
 
 When `/sandbox/wiki` exists (or `WIKI_PATH` env var points elsewhere), three tools are registered at startup:
