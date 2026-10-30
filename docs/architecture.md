@@ -2,6 +2,36 @@
 
 nous extends [pi](https://github.com/earendil-works/pi) with an EnMaaS provider, a virtual model router, and tools. The extension lives in [`context/router/`](../context/router/).
 
+## System overview
+
+```mermaid
+flowchart LR
+    User["User"]
+    subgraph Runtime["nous container runtime"]
+        Main["Main pi session"]
+        Router["router/auto"]
+        Tools["Built-in tools"]
+        Child["Subagent pi process"]
+        Workspace["Mounted workspace and wiki"]
+        Main --> Router
+        Main --> Tools
+        Main -->|"Explicit delegation"| Child
+        Child -->|"Findings"| Main
+        Tools --> Workspace
+        Child -->|"Read-only tools"| Workspace
+    end
+    User -->|"Request"| Main
+    Main -->|"Response"| User
+    Router --> Gateway["EnMaaS gateway"]
+    Child -->|"Fixed model"| Gateway
+    Tools --> External["DuckDuckGo and MCP servers"]
+    Child -->|"Slack researcher only"| Slack["Slack API"]
+```
+
+A child uses its fixed model through EnMaaS. It does not use `router/auto`. A child and the main session share the filesystem, operating-system identity, and network policy. The child tool list is not a security sandbox.
+
+OpenShell can apply a network policy around the runtime. A plain Podman run does not apply that policy. See [network boundary](#network-boundary).
+
 ## Model routing
 
 The default session model is `router/auto`. At startup, nous queries the EnMaaS model list. It keeps the listed tier candidates and the locally pinned hosted models. If discovery fails, it uses the configured fallback tiers.

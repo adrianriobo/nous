@@ -8,6 +8,23 @@
 
 nous combines model routing, research tools, and container images for engineering work.
 
+## How nous works
+
+```mermaid
+flowchart LR
+    User["User"] --> Main["Main pi session"]
+    Main --> Router["router/auto"] --> Gateway["EnMaaS gateway"]
+    Main --> Tools["Built-in tools"]
+    Main -->|"Explicit request"| Children["Subagent processes"]
+    Children -->|"Fixed models"| Gateway
+    Tools --> Systems["Wiki, web, MCP servers, and files"]
+    Children -->|"Read-only tools"| Sources["Repository, wiki, or Slack thread"]
+    Children -->|"Findings"| Main
+    Main -->|"Response"| User
+```
+
+The advanced reviewer requires confirmation before each paid invocation. The main session must verify subagent findings. Child processes share the parent's filesystem and network policy. See [architecture](docs/architecture.md) and [subagents](docs/subagents.md).
+
 ## Smart features
 
 - **Model routing:** `router/auto` selects an EnMaaS model for the task and execution phase. Paid models can be selected; review [routing and costs](docs/architecture.md#model-routing).

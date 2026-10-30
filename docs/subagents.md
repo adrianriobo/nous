@@ -2,6 +2,41 @@
 
 The `subagent` tool adds separate model sessions to the existing router. It does not change the main session model.
 
+## Delegation flow
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Main as Main pi session
+    participant Tool as Subagent tool
+    participant Child as Child pi process
+    participant Source as Repository, wiki, or Slack
+    participant Gateway as EnMaaS gateway
+    User->>Main: Request a subagent
+    Main->>Tool: Send the role and task
+    opt Paid advanced reviewer
+        Tool->>User: Request confirmation
+        User-->>Tool: Approve or decline
+    end
+    alt Free role or approved paid role
+        Tool->>Child: Start the selected role
+        Child->>Gateway: Use the role's fixed model
+        Child->>Source: Read through role-specific tools
+        Source-->>Child: Return source data
+        Child-->>Tool: Return findings and usage
+        Tool-->>Main: Return the result
+        Main->>Main: Verify important findings
+        Main-->>User: Report the result
+    else Paid role declined
+        Tool-->>Main: Return an error
+        Main-->>User: Report the result
+    end
+```
+
+The tool starts a paid child only after confirmation. The child receives the task, not the full parent conversation. The child has no nested subagent tool. See [security limits](#security-limits).
+
+## Roles
+
 Ask for a subagent explicitly. For example:
 
 > Use the scout subagent to find the authentication code.
