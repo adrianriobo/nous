@@ -4,29 +4,9 @@ nous extends [pi](https://github.com/earendil-works/pi) with an EnMaaS provider,
 
 ## System overview
 
-```mermaid
-flowchart LR
-    User["User"]
-    subgraph Runtime["nous container runtime"]
-        Main["Main pi session"]
-        Router["router/auto"]
-        Tools["Built-in tools"]
-        Child["Subagent pi process"]
-        Workspace["Mounted workspace and wiki"]
-        Main --> Router
-        Main --> Tools
-        Main -->|"Explicit delegation"| Child
-        Child -->|"Findings"| Main
-        Tools --> Workspace
-        Child -->|"Read-only tools"| Workspace
-    end
-    User -->|"Request"| Main
-    Main -->|"Response"| User
-    Router --> Gateway["EnMaaS gateway"]
-    Child -->|"Fixed model"| Gateway
-    Tools --> External["DuckDuckGo and MCP servers"]
-    Child -->|"Slack researcher only"| Slack["Slack API"]
-```
+<p align="center">
+  <img src="../assets/diagrams/system-overview.svg" alt="Diagram: the nous runtime contains the main session, the router, built-in tools, and subagent processes. External systems are the EnMaaS gateway, search and MCP servers, and Slack." width="100%"/>
+</p>
 
 A child uses its fixed model through EnMaaS. It does not use `router/auto`. A child and the main session share the filesystem, operating-system identity, and network policy. The child tool list is not a security sandbox.
 

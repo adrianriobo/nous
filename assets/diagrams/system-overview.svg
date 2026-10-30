@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="440" viewBox="0 0 1000 440" role="img" aria-labelledby="title desc">
+  <title id="title">nous system overview</title>
+  <desc id="desc">A user sends a request to the main pi session inside the nous runtime. The main session uses router/auto to reach the EnMaaS gateway, calls built-in tools, and can delegate an explicit task to a subagent process. The subagent uses a fixed model and reads the repository, wiki, or Slack. The main session verifies the findings before it answers the user.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4a5568"/>
+    </marker>
+    <style>
+      .box { fill: #ffffff; stroke: #4a5568; stroke-width: 1.5; }
+      .group { fill: #f7fafc; stroke: #a0aec0; stroke-width: 1.5; stroke-dasharray: 6 4; }
+      .label { font-family: "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; fill: #1a202c; }
+      .sub { font-family: "Segoe UI", Helvetica, Arial, sans-serif; font-size: 11px; fill: #4a5568; }
+      .edge { stroke: #4a5568; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+      .edgeLabel { font-family: "Segoe UI", Helvetica, Arial, sans-serif; font-size: 11px; fill: #2d3748; }
+      .groupLabel { font-family: "Segoe UI", Helvetica, Arial, sans-serif; font-size: 12px; fill: #4a5568; font-weight: 600; }
+    </style>
+  </defs>
+
+  <rect class="group" x="230" y="120" width="430" height="240" rx="12"/>
+  <text class="groupLabel" x="246" y="142">nous runtime</text>
+
+  <rect class="box" x="350" y="24" width="150" height="48" rx="8"/>
+  <text class="label" x="425" y="53" text-anchor="middle">User</text>
+
+  <rect class="box" x="330" y="160" width="190" height="56" rx="8"/>
+  <text class="label" x="425" y="184" text-anchor="middle">Main pi session</text>
+  <text class="sub" x="425" y="202" text-anchor="middle">verifies all findings</text>
+
+  <rect class="box" x="540" y="160" width="120" height="56" rx="8"/>
+  <text class="label" x="600" y="184" text-anchor="middle">router/auto</text>
+  <text class="sub" x="600" y="202" text-anchor="middle">selects a model</text>
+
+  <rect class="box" x="250" y="270" width="170" height="56" rx="8"/>
+  <text class="label" x="335" y="294" text-anchor="middle">Built-in tools</text>
+  <text class="sub" x="335" y="312" text-anchor="middle">web, review, wiki, MCP</text>
+
+  <rect class="box" x="470" y="270" width="170" height="56" rx="8"/>
+  <text class="label" x="555" y="294" text-anchor="middle">Subagent process</text>
+  <text class="sub" x="555" y="312" text-anchor="middle">fixed model, read-only</text>
+
+  <rect class="box" x="250" y="384" width="390" height="44" rx="8"/>
+  <text class="label" x="445" y="411" text-anchor="middle">Repository, mounted wiki, and workspace</text>
+
+  <rect class="box" x="800" y="160" width="160" height="56" rx="8"/>
+  <text class="label" x="880" y="184" text-anchor="middle">EnMaaS gateway</text>
+  <text class="sub" x="880" y="202" text-anchor="middle">hosted and paid tiers</text>
+
+  <rect class="box" x="24" y="270" width="170" height="56" rx="8"/>
+  <text class="label" x="109" y="294" text-anchor="middle">DuckDuckGo, MCP</text>
+  <text class="sub" x="109" y="312" text-anchor="middle">external services</text>
+
+  <rect class="box" x="800" y="270" width="160" height="56" rx="8"/>
+  <text class="label" x="880" y="294" text-anchor="middle">Slack API</text>
+  <text class="sub" x="880" y="312" text-anchor="middle">one thread, read-only</text>
+
+  <path class="edge" d="M 425 72 L 425 160"/>
+  <text class="edgeLabel" x="433" y="112">request</text>
+
+  <path class="edge" d="M 520 188 L 540 188"/>
+  <path class="edge" d="M 660 188 L 800 188"/>
+  <text class="edgeLabel" x="672" y="182">model request</text>
+
+  <path class="edge" d="M 405 216 L 350 270"/>
+  <text class="edgeLabel" x="340" y="246">tool call</text>
+
+  <path class="edge" d="M 445 216 L 520 270" marker-start="url(#arrow)"/>
+  <text class="edgeLabel" x="430" y="238">task</text>
+  <text class="edgeLabel" x="428" y="262">findings</text>
+
+  <path class="edge" d="M 250 298 L 194 298"/>
+  <text class="edgeLabel" x="196" y="292">query</text>
+
+  <path class="edge" d="M 640 298 L 800 298"/>
+  <text class="edgeLabel" x="690" y="292">read thread</text>
+
+  <path class="edge" d="M 335 326 L 335 384"/>
+  <text class="edgeLabel" x="343" y="352">read and write</text>
+
+  <path class="edge" d="M 555 326 L 555 384"/>
+  <text class="edgeLabel" x="563" y="352">read only</text>
+</svg>
