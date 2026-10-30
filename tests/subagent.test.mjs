@@ -3,11 +3,14 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { createServer } from "node:net";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { createServer as createHttpServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { registerSubagent } from "../context/router/subagent.ts";
+import { registerSubagentTools } from "../context/router/subagent-tools.ts";
+import { fetchSlackThread } from "../context/router/slack.ts";
 import { MODEL_IDS } from "../context/router/enmaas.ts";
 
 async function freePort() {
@@ -36,7 +39,53 @@ const mock = spawn(process.execPath, ["tests/mock-enmaas-server.mjs"], {
   cwd: process.cwd(), env: { ...process.env, PORT: String(port), MOCK_SCENARIO: "subagent" }, stdio: ["ignore", "pipe", "inherit"],
 });
 await once(mock.stdout, "data");
-test.after(async () => { mock.kill(); await once(mock, "close"); await rm(home, { recursive: true, force: true }); });
+
+// Wiki fixture for the wiki-researcher child.
+process.env.WIKI_PATH = join(home, "wiki");
+await mkdir(join(process.env.WIKI_PATH, "concepts"), { recursive: true });
+await writeFile(
+  join(process.env.WIKI_PATH, "concepts", "router.md"),
+  "---\ntype: concept\ntitle: Router\ndescription: nous router notes\ntags: [nous]\n---\n\nnous uses a router to select a model tier.\n",
+);
+
+// Read-only Slack API mock for the slack-researcher child.
+const slackPort = await freePort();
+const slackRequests = [];
+const slackMock = createHttpServer((req, res) => {
+  const url = new URL(req.url, "http://localhost");
+  slackRequests.push({ url: url.pathname, query: url.search, auth: req.headers.authorization, cookie: req.headers.cookie });
+  const authorized = req.headers.authorization === "Bearer xoxc-test" && req.headers.cookie === "d=xoxd-test";
+  if (url.pathname !== "/api/conversations.replies") {
+    res.writeHead(404);
+    res.end(JSON.stringify({ ok: false, error: "not_found" }));
+    return;
+  }
+  if (!authorized) {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: false, error: "invalid_auth" }));
+    return;
+  }
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({
+    ok: true,
+    messages: [
+      { ts: "1769005300.000000", user: "U12345678", text: "Thread decision: use Konflux." },
+      { ts: "1769005400.000000", user: "U87654321", text: "Open question: who owns the fallback registry?" },
+    ],
+    response_metadata: { next_cursor: "" },
+  }));
+});
+await new Promise((resolve) => slackMock.listen(slackPort, "127.0.0.1", resolve));
+process.env.SLACK_API_BASE = `http://127.0.0.1:${slackPort}/api`;
+process.env.SLACK_XOXC_TOKEN = "xoxc-test";
+process.env.SLACK_XOXD_TOKEN = "xoxd-test";
+
+test.after(async () => {
+  mock.kill();
+  await once(mock, "close");
+  await new Promise((resolve) => slackMock.close(resolve));
+  await rm(home, { recursive: true, force: true });
+});
 
 test("scout and reviewer use fixed models and read-only tools", async () => {
   const { tool, ctx, start } = createHarness();
@@ -136,4 +185,49 @@ test("per-prompt call limit resets on a new prompt", async () => {
   await assert.rejects(tool.execute("id", params, undefined, undefined, ctx), /call limit/);
   await start();
   await assert.rejects(tool.execute("id", params, undefined, undefined, ctx), /not approved/);
+});
+
+test("wiki researcher reads the wiki with the free model", async () => {
+  const { tool, ctx, start } = createHarness();
+  await start();
+  const result = await tool.execute("id", { role: "wiki-researcher", task: "MOCK_WIKI_CHILD Find router notes." }, undefined, undefined, ctx);
+  assert.equal(result.details.model, MODEL_IDS.scout);
+  assert.equal(result.details.turns, 2);
+  assert.match(result.content[0].text, /MOCK_SUBAGENT_OK/);
+  assert.match(result.content[0].text, /nous uses a router to select a model tier/);
+});
+
+test("slack researcher reads a thread with the free model", async () => {
+  const { tool, ctx, start } = createHarness();
+  await start();
+  const result = await tool.execute("id", { role: "slack-researcher", task: "MOCK_SLACK_CHILD Summarize the thread." }, undefined, undefined, ctx);
+  assert.equal(result.details.model, MODEL_IDS.scout);
+  assert.match(result.content[0].text, /MOCK_SUBAGENT_OK/);
+  assert.match(result.content[0].text, /Thread decision: use Konflux/);
+  assert.match(result.content[0].text, /Open question: who owns the fallback registry/);
+  assert.equal(slackRequests.at(-1)?.url, "/api/conversations.replies");
+  assert.match(slackRequests.at(-1)?.query ?? "", /channel=C08LVA9E1SS/);
+});
+
+test("research roles register only read-only tools", () => {
+  const namesFor = (role) => {
+    const names = [];
+    registerSubagentTools({ registerTool: (definition) => names.push(definition.name) }, role);
+    return names.sort();
+  };
+  assert.deepEqual(namesFor("wiki-researcher"), ["wiki_read", "wiki_search"]);
+  assert.deepEqual(namesFor("slack-researcher"), ["slack_thread"]);
+  assert.deepEqual(namesFor("scout"), []);
+});
+
+test("slack reader rejects invalid input and reports auth errors", async () => {
+  await assert.rejects(fetchSlackThread("bad-channel", "1769005300.000000"), /channel/i);
+  await assert.rejects(fetchSlackThread("C08LVA9E1SS", "not-a-timestamp"), /timestamp/i);
+  const saved = process.env.SLACK_XOXC_TOKEN;
+  process.env.SLACK_XOXC_TOKEN = "xoxc-wrong";
+  try {
+    await assert.rejects(fetchSlackThread("C08LVA9E1SS", "1769005300.000000"), /authentication failed/i);
+  } finally {
+    process.env.SLACK_XOXC_TOKEN = saved;
+  }
 });

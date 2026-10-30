@@ -166,7 +166,12 @@ const server = http.createServer((req, res) => {
         return;
       }
       const names = (parsed.tools ?? []).map((tool) => tool.function?.name ?? tool.name).sort();
-      const expected = ["find", "grep", "ls", "read"];
+      const researchRole = body.includes("MOCK_WIKI_CHILD")
+        ? "wiki"
+        : body.includes("MOCK_SLACK_CHILD") ? "slack" : "files";
+      const expected = researchRole === "wiki"
+        ? ["wiki_read", "wiki_search"]
+        : researchRole === "slack" ? ["slack_thread"] : ["find", "grep", "ls", "read"];
       const modelIsValid = [MODELS[0], MODELS[6], MODELS[7]].includes(model);
       if (!modelIsValid || JSON.stringify(names) !== JSON.stringify(expected) || responses !== (model === MODELS[0])) {
         res.writeHead(400, { "Content-Type": "application/json" });
@@ -185,10 +190,22 @@ const server = http.createServer((req, res) => {
         return;
       }
       res.writeHead(200, { "Content-Type": "text/event-stream" });
-      if (!parsed.messages.some((message) => message.role === "tool")) {
-        streamToolUse(res, "read", "call_subagent_read", { path: "README.md", limit: 2 }, model);
+      const toolMessages = parsed.messages.filter((message) => message.role === "tool");
+      if (toolMessages.length === 0) {
+        if (researchRole === "wiki") {
+          streamToolUse(res, "wiki_search", "call_child_wiki", { query: "nous", limit: 3 }, model);
+        } else if (researchRole === "slack") {
+          streamToolUse(res, "slack_thread", "call_child_slack", { channel: "C08LVA9E1SS", thread_ts: "1769005300.000000", limit: 10 }, model);
+        } else {
+          streamToolUse(res, "read", "call_subagent_read", { path: "README.md", limit: 2 }, model);
+        }
       } else {
-        streamText(res, "MOCK_SUBAGENT_OK", model);
+        // Echo the tool result so the test can prove that the child tool ran.
+        const last = toolMessages[toolMessages.length - 1];
+        const toolText = String(typeof last.content === "string" ? last.content : JSON.stringify(last.content ?? ""))
+          .replace(/\s+/g, " ")
+          .slice(0, 800);
+        streamText(res, `MOCK_SUBAGENT_OK ${toolText}`, model);
       }
       return;
     }
