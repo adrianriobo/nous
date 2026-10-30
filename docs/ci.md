@@ -83,7 +83,12 @@ data: {"object":"chat.completion.chunk","choices":[{"delta":{"content":"H"}}], .
 ... (streams character by character)
 data: {"object":"chat.completion.chunk","choices":[{"delta":{},"finish_reason":"stop"}], ...}
 data: {"object":"chat.completion.chunk","choices":[],"usage":{...}}
+data: <end-of-stream sentinel>
 ```
+
+The stream must end with the OpenAI end-of-stream sentinel event. pi parses this
+stream with the official `openai` SDK. Without the sentinel, the SDK reports a
+malformed server-sent event and pi ends the turn with `stopReason: error`.
 
 Override the response text with `MOCK_RESPONSE=<text>`. Port defaults to `4010`.
 
