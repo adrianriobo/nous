@@ -7,6 +7,7 @@
 ```bash
 podman run --rm -it \
   --env ENMAAS_API_KEY=<your-api-key> \
+  --env ENMAAS_BASE_URL=<your-gateway-base-url> \
   ghcr.io/aipcc/nous:latest
 ```
 
@@ -16,6 +17,7 @@ podman run --rm -it \
 echo 'your task here' | \
   podman run --rm -i \
   --env ENMAAS_API_KEY=<your-api-key> \
+  --env ENMAAS_BASE_URL=<your-gateway-base-url> \
   ghcr.io/aipcc/nous:latest
 ```
 
@@ -26,12 +28,14 @@ echo 'your task here' | \
 echo 'Review PR https://github.com/OWNER/REPO/pull/NNN' | \
   podman run --rm -i \
   --env ENMAAS_API_KEY=<your-api-key> \
+  --env ENMAAS_BASE_URL=<your-gateway-base-url> \
   ghcr.io/aipcc/nous:latest
 
 # Private repo — add a GitHub token
 echo 'Review PR https://github.com/OWNER/REPO/pull/NNN' | \
   podman run --rm -i \
   --env ENMAAS_API_KEY=<your-api-key> \
+  --env ENMAAS_BASE_URL=<your-gateway-base-url> \
   --env GITHUB_TOKEN=<token> \
   ghcr.io/aipcc/nous:latest
 ```
@@ -52,7 +56,7 @@ openshell settings set --global --key providers_v2_enabled --value true --yes
 openshell provider create \
   --name enmaas-nous \
   --type openai-compatible \
-  --config OPENAI_BASE_URL=https://api.enmaas.devshift.net/v1 \
+  --config OPENAI_BASE_URL=<your-gateway-base-url> \
   --config OPENAI_API_KEY=<your-api-key>
 ```
 

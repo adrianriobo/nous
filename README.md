@@ -37,17 +37,20 @@ Both are built from the same `Containerfile` using named targets (`--target nous
 # Base image — interactive
 podman run --rm -it \
   --env ENMAAS_API_KEY=<your-api-key> \
+  --env ENMAAS_BASE_URL=<your-gateway-base-url> \
   ghcr.io/aipcc/nous:latest
 
 # Productization image — with Jira/GitLab/Konflux skills
 podman run --rm -it \
   --env ENMAAS_API_KEY=<your-api-key> \
+  --env ENMAAS_BASE_URL=<your-gateway-base-url> \
   ghcr.io/aipcc/nous-productization:latest
 
 # Or pipe a task
 echo 'Review PR https://github.com/OWNER/REPO/pull/42' | \
   podman run --rm -i \
   --env ENMAAS_API_KEY=<your-api-key> \
+  --env ENMAAS_BASE_URL=<your-gateway-base-url> \
   ghcr.io/aipcc/nous:latest
 ```
 
@@ -58,6 +61,7 @@ Mount an [OKF 2.0](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob
 ```bash
 podman run --rm -it \
   --env ENMAAS_API_KEY=<your-api-key> \
+  --env ENMAAS_BASE_URL=<your-gateway-base-url> \
   -v /path/to/your/obsidian-vault:/sandbox/wiki:z \
   ghcr.io/aipcc/nous:latest
 ```
@@ -93,7 +97,7 @@ nous needs two env vars and Google credentials:
 | Variable | Description |
 |---|---|
 | `ENMAAS_API_KEY` | EnMaaS gateway API key |
-| `ENMAAS_BASE_URL` | Gateway base URL (default `https://api.enmaas.devshift.net/v1`) |
+| `ENMAAS_BASE_URL` | EnMaaS gateway base URL. **Required** — there is no default. Set it in your environment |
 
 For credentials, mount your ADC file (shown above) or set `GOOGLE_APPLICATION_CREDENTIALS` to a service account JSON path.
 

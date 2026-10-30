@@ -15,7 +15,7 @@ frontier and open-weight models through the OpenAI-compatible completions API.
 Set these environment variables to connect nous to EnMaaS:
 
 - `ENMAAS_API_KEY` — API key for the gateway
-- `ENMAAS_BASE_URL` — gateway base URL (default `https://api.enmaas.devshift.net/v1`)
+- `ENMAAS_BASE_URL` — gateway base URL (required, no default)
 
 ## Supported models
 

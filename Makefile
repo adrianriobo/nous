@@ -32,8 +32,9 @@ push: build ## Push image to registry
 test: ## Run container structure tests
 	$(CST) test --image $(FULL_IMAGE) --config tests/structure-test.yaml
 
-smoke: ## Run runtime smoke tests (requires ENMAAS_API_KEY)
+smoke: ## Run runtime smoke tests (requires ENMAAS_API_KEY + ENMAAS_BASE_URL)
 	@[[ -n "$$ENMAAS_API_KEY" ]] || { echo "ERROR: ENMAAS_API_KEY not set"; exit 1; }
+	@[[ -n "$$ENMAAS_BASE_URL" ]] || { echo "ERROR: ENMAAS_BASE_URL not set"; exit 1; }
 	bash tests/smoke_test.sh $(FULL_IMAGE)
 
 integration: build ## Run integration tests against mock EnMaaS server (no real creds needed)
