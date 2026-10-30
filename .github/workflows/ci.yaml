@@ -7,11 +7,13 @@ on:
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
+      - 'assets/**'
   pull_request:
     branches: [main]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
+      - 'assets/**'
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/nous
