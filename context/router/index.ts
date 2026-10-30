@@ -3,6 +3,7 @@ import { discoverTools, callMcpToolSSE, callMcpToolStreamable, type DiscoveryRes
 import { ddgSearch } from "./router/search";
 import { registerEnmaasProvider, discoverTiers } from "./router/enmaas";
 import { registerRouter } from "./router/model";
+import { registerSubagent } from "./router/subagent";
 import { wikiSearch, wikiRead, wikiIngest, WIKI_PATH } from "./router/wiki";
 import { existsSync } from "fs";
 
@@ -210,6 +211,7 @@ Do NOT use this to write wiki pages directly — the processor agent handles tha
   // models it confirms. Falls back to hardcoded defaults when the gateway
   // or credentials are unavailable.
   registerEnmaasProvider(pi);
+  registerSubagent(pi);
   const tiers = await discoverTiers();
   registerRouter(pi, tiers);
 }

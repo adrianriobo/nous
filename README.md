@@ -10,6 +10,8 @@
 
 **Smart model routing** — automatically picks the right model for each task. Default is GLM 5.3 (free hosted model) for plan-phase turns; DeepSeek V4.1 Flash (free) for trivial queries and mechanical implementation. Paid frontier models serve retry escalation only. Available models are self-discovered from the EnMaaS gateway at boot — no configuration needed.
 
+**Model-specific subagents** — request a read-only scout or reviewer with a separate model. The advanced reviewer requires confirmation before each paid call. See [subagents](docs/subagents.md).
+
 **Web search** — DuckDuckGo search built in. The agent searches the web when it needs current information without you having to ask.
 
 **AI code review** — powered by [Alibaba open-code-review](https://github.com/alibaba/open-code-review). Point it at a GitHub PR and it gives you structured, rule-based feedback.

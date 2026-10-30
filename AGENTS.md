@@ -31,6 +31,7 @@ nous wraps [pi](https://github.com/earendil-works/pi) with a TypeScript extensio
 2. **`web_search` tool** — DuckDuckGo via fetch
 3. **`code_review` tool** — Alibaba open-code-review in delegate mode
 4. **MCP tool injection** — discovers and registers tools from any HTTP MCP server at startup
+5. **`subagent` tool** — delegates read-only tasks to model-specific child sessions
 
 The provider (`enmaas`) is registered by the router extension at boot. The gateway speaks the OpenAI completions API that pi supports natively, so no provider package or patch is needed.
 
@@ -176,6 +177,10 @@ Typical flow for a GitHub PR review:
 2. pi calls `code_review(mode: "preview")` to see which files ocr would select
 3. pi calls `code_review(files: [...])` to get rule-based review guidance
 4. pi reads the flagged files and produces structured findings
+
+### `subagent`
+
+Use the `scout` or `reviewer` role when the user explicitly requests delegation. Use `advanced-reviewer` only after the user confirms the paid invocation. The child uses a separate pi process with read-only tools. It shares the parent filesystem and operating-system permissions. Verify its output before use. See [subagents](docs/subagents.md) for limits and security details.
 
 ## Productization skills (`nous-productization`)
 

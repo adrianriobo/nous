@@ -21,6 +21,12 @@ export function resolveBaseUrl(): string {
 
 export type Tier = { provider: string; id: string };
 
+export const MODEL_IDS = {
+  scout: "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  reviewer: "rits/zai-org/glm-5-3",
+  advancedReviewer: "gpt-6.1-terra",
+} as const;
+
 // ── Model catalog ─────────────────────────────────────────────────────────────
 // Full catalog served by the gateway. Costs are zero: usage is metered by the
 // gateway (PriceTag), not through pi. Add new gateway models here; they become
@@ -63,7 +69,7 @@ const RESPONSES = { api: "openai-responses" };
 
 const CATALOG = [
   // OpenAI family
-  m("gpt-6.1-terra", "GPT 6.1 Terra (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
+  m(MODEL_IDS.advancedReviewer, "GPT 6.1 Terra (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
   m("gpt-6.1-sol", "GPT 6.1 Sol (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
   m("gpt-6-astra", "GPT 6 Astra (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
   m("gpt-6-sol", "GPT 6 Sol (EnMaaS)", true, 1_048_576, 65_536, undefined, RESPONSES),
@@ -91,12 +97,12 @@ const CATALOG = [
   // Hosted model, free of charge. Context window must not exceed 1,000,000
   // (gateway limit). Penalties must stay 0: non-zero values make GLM drift
   // into Chinese.
-  m("rits/zai-org/glm-5-3", "GLM 5.3 (EnMaaS)", true, 1_000_000, 65_536, NO_DEVELOPER_ROLE, {
+  m(MODEL_IDS.reviewer, "GLM 5.3 (EnMaaS)", true, 1_000_000, 65_536, NO_DEVELOPER_ROLE, {
     samplingParams: { frequency_penalty: 0, presence_penalty: 0 },
   }),
   // Hosted model, free of charge. Do not copy GLM context-window, penalty,
   // or capability settings here.
-  m("rits/deepseek-ai/DeepSeek-V4.1-Flash-1017", "DeepSeek V4.1 Flash (EnMaaS)", false, 128_000, 16_384, NO_DEVELOPER_ROLE),
+  m(MODEL_IDS.scout, "DeepSeek V4.1 Flash (EnMaaS)", false, 128_000, 16_384, NO_DEVELOPER_ROLE),
 ];
 
 // ── Routing tiers ─────────────────────────────────────────────────────────────
