@@ -1,8 +1,7 @@
-REGISTRY    ?= quay.io/aipcc
-IMAGE       ?= haropz
+REGISTRY    ?= ghcr.io/adrianriobo
+IMAGE       ?= nous
 VERSION     ?= 0.1.0
 TAG         ?= $(VERSION)
-BASE_IMAGE  ?= quay.io/aipcc/base-images/agentic/pi:0.85.1-1789053384
 
 FULL_IMAGE  = $(REGISTRY)/$(IMAGE):$(TAG)
 LATEST      = $(REGISTRY)/$(IMAGE):latest
@@ -16,7 +15,6 @@ all: build test ## Build image and run structure tests
 
 build: ## Build the OCI image
 	$(ENGINE) build \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 		--build-arg VERSION=$(VERSION) \
 		--label "org.opencontainers.image.version=$(VERSION)" \
 		--label "org.opencontainers.image.source=$(shell git remote get-url origin 2>/dev/null || echo unknown)" \
@@ -34,22 +32,18 @@ push: build ## Push image to registry
 test: ## Run container structure tests
 	$(CST) test --image $(FULL_IMAGE) --config tests/structure-test.yaml
 
-smoke: ## Run runtime smoke tests (requires ANTHROPIC_API_KEY)
-	@[[ -n "$$ANTHROPIC_API_KEY" ]] || { echo "ERROR: ANTHROPIC_API_KEY not set"; exit 1; }
+smoke: ## Run runtime smoke tests (requires ENMAAS_API_KEY)
+	@[[ -n "$$ENMAAS_API_KEY" ]] || { echo "ERROR: ENMAAS_API_KEY not set"; exit 1; }
 	bash tests/smoke_test.sh $(FULL_IMAGE)
 
-integration: build ## Run integration tests against mock Vertex server (no real creds needed)
-	@HOST_IP=$$(ip route get 1.1.1.1 | grep -oP 'src \K\S+'); \
-	node tests/mock-vertex-server.mjs & MOCK_PID=$$!; \
+integration: build ## Run integration tests against mock EnMaaS server (no real creds needed)
+	@node tests/mock-enmaas-server.mjs & MOCK_PID=$$!; \
 	sleep 1; \
-	echo "say hello" | \
-	  openshell sandbox create \
-	    --from $(FULL_IMAGE) \
-	    --policy ./security/haropz-policy-integration-test.yaml \
-	    --env ANTHROPIC_VERTEX_PROJECT_ID=test-project \
-	    --env CLOUD_ML_REGION=us-east5 \
-	    --env "VERTEX_API_BASE_URL=http://$$HOST_IP:4010" \
-	    --no-keep \
+	echo 'say hello' | \
+	  $(ENGINE) run --rm -i --network=host \
+	    --env ENMAAS_API_KEY=test-key \
+	    --env ENMAAS_BASE_URL=http://127.0.0.1:4010/v1 \
+	    $(FULL_IMAGE) \
 	    -- pi --print -; \
 	kill $$MOCK_PID 2>/dev/null || true
 

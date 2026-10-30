@@ -1,7 +1,8 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { discoverTools, callMcpToolSSE, callMcpToolStreamable, type DiscoveryResult } from "./router/mcp";
 import { ddgSearch } from "./router/search";
-import { discoverTiers, registerRouter } from "./router/model";
+import { registerEnmaasProvider, discoverTiers } from "./router/enmaas";
+import { registerRouter } from "./router/model";
 import { wikiSearch, wikiRead, wikiIngest, WIKI_PATH } from "./router/wiki";
 import { existsSync } from "fs";
 
@@ -203,9 +204,12 @@ Do NOT use this to write wiki pages directly — the processor agent handles tha
     process.stderr.write(`[nous] wiki: not mounted (${WIKI_PATH} not found) — wiki tools skipped\n`);
   }
 
-  // ── Model router ────────────────────────────────────────────────────────────
-  // Probe Vertex AI at boot to build live tiers from confirmed-available models.
-  // Falls back to hardcoded defaults if credentials or network are unavailable.
+  // ── EnMaaS provider + model router ─────────────────────────────────────────
+  // Register the EnMaaS provider first so the gateway models exist in the
+  // registry, then probe the gateway at boot to build live tiers from the
+  // models it confirms. Falls back to hardcoded defaults when the gateway
+  // or credentials are unavailable.
+  registerEnmaasProvider(pi);
   const tiers = await discoverTiers();
   registerRouter(pi, tiers);
 }

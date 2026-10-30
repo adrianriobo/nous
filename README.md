@@ -4,11 +4,11 @@
 
 <h1 align="center">nous</h1>
 
-<p align="center">A production-ready <a href="https://github.com/earendil-works/pi">pi</a> coding agent with Vertex AI, built for secure enterprise environments.</p>
+<p align="center">A production-ready <a href="https://github.com/earendil-works/pi">pi</a> coding agent with EnMaaS, built for secure enterprise environments.</p>
 
 ## What you get
 
-**Smart model routing** — automatically picks the right Claude model for each task. Default is Opus 4.6 for all plan-phase turns; Haiku for trivial queries and mechanical implementation. Available models are self-discovered from your Vertex AI project at boot — no configuration needed.
+**Smart model routing** — automatically picks the right model for each task. Default is GPT 6.1 Terra for all plan-phase turns; Gemini 3.8 Flash for trivial queries and mechanical implementation. Available models are self-discovered from the EnMaaS gateway at boot — no configuration needed.
 
 **Web search** — DuckDuckGo search built in. The agent searches the web when it needs current information without you having to ask.
 
@@ -36,24 +36,18 @@ Both are built from the same `Containerfile` using named targets (`--target nous
 ```bash
 # Base image — interactive
 podman run --rm -it \
-  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
-  --env CLOUD_ML_REGION=us-east5 \
-  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  --env ENMAAS_API_KEY=<your-api-key> \
   ghcr.io/aipcc/nous:latest
 
 # Productization image — with Jira/GitLab/Konflux skills
 podman run --rm -it \
-  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
-  --env CLOUD_ML_REGION=us-east5 \
-  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  --env ENMAAS_API_KEY=<your-api-key> \
   ghcr.io/aipcc/nous-productization:latest
 
 # Or pipe a task
 echo 'Review PR https://github.com/OWNER/REPO/pull/42' | \
   podman run --rm -i \
-  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
-  --env CLOUD_ML_REGION=us-east5 \
-  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  --env ENMAAS_API_KEY=<your-api-key> \
   ghcr.io/aipcc/nous:latest
 ```
 
@@ -63,9 +57,7 @@ Mount an [OKF 2.0](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob
 
 ```bash
 podman run --rm -it \
-  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
-  --env CLOUD_ML_REGION=us-east5 \
-  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  --env ENMAAS_API_KEY=<your-api-key> \
   -v /path/to/your/obsidian-vault:/sandbox/wiki:z \
   ghcr.io/aipcc/nous:latest
 ```
@@ -100,8 +92,8 @@ nous needs two env vars and Google credentials:
 
 | Variable | Description |
 |---|---|
-| `ANTHROPIC_VERTEX_PROJECT_ID` | Your GCP project ID |
-| `CLOUD_ML_REGION` | Vertex AI region, e.g. `us-east5` |
+| `ENMAAS_API_KEY` | EnMaaS gateway API key |
+| `ENMAAS_BASE_URL` | Gateway base URL (default `https://api.enmaas.devshift.net/v1`) |
 
 For credentials, mount your ADC file (shown above) or set `GOOGLE_APPLICATION_CREDENTIALS` to a service account JSON path.
 
@@ -174,5 +166,5 @@ make build
 | Topic | Doc |
 |---|---|
 | Running with podman and OpenShell | [docs/running.md](docs/running.md) |
-| CI/CD workflows and mock Vertex server | [docs/ci.md](docs/ci.md) |
+| CI/CD workflows and mock EnMaaS server | [docs/ci.md](docs/ci.md) |
 | Router logic, model tiers, tools, egress architecture | [AGENTS.md](AGENTS.md) |

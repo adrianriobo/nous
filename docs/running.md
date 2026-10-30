@@ -6,9 +6,7 @@
 
 ```bash
 podman run --rm -it \
-  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
-  --env CLOUD_ML_REGION=us-east5 \
-  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  --env ENMAAS_API_KEY=<your-api-key> \
   ghcr.io/aipcc/nous:latest
 ```
 
@@ -17,9 +15,7 @@ podman run --rm -it \
 ```bash
 echo 'your task here' | \
   podman run --rm -i \
-  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
-  --env CLOUD_ML_REGION=us-east5 \
-  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  --env ENMAAS_API_KEY=<your-api-key> \
   ghcr.io/aipcc/nous:latest
 ```
 
@@ -29,18 +25,14 @@ echo 'your task here' | \
 # Public repo
 echo 'Review PR https://github.com/OWNER/REPO/pull/NNN' | \
   podman run --rm -i \
-  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
-  --env CLOUD_ML_REGION=us-east5 \
-  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
+  --env ENMAAS_API_KEY=<your-api-key> \
   ghcr.io/aipcc/nous:latest
 
 # Private repo — add a GitHub token
 echo 'Review PR https://github.com/OWNER/REPO/pull/NNN' | \
   podman run --rm -i \
-  --env ANTHROPIC_VERTEX_PROJECT_ID=<your-project> \
-  --env CLOUD_ML_REGION=us-east5 \
+  --env ENMAAS_API_KEY=<your-api-key> \
   --env GITHUB_TOKEN=<token> \
-  -v ~/.config/gcloud/application_default_credentials.json:/sandbox/.config/gcloud/application_default_credentials.json:z \
   ghcr.io/aipcc/nous:latest
 ```
 
@@ -50,7 +42,7 @@ echo 'Review PR https://github.com/OWNER/REPO/pull/NNN' | \
 
 ## NVIDIA OpenShell
 
-OpenShell enforces network policy at the kernel level. The agent can only reach what the policy explicitly allows — Vertex AI and GitHub by default.
+OpenShell enforces network policy at the kernel level. The agent can only reach what the policy explicitly allows — EnMaaS and GitHub by default.
 
 ### One-time provider setup
 
@@ -58,11 +50,10 @@ OpenShell enforces network policy at the kernel level. The agent can only reach 
 openshell settings set --global --key providers_v2_enabled --value true --yes
 
 openshell provider create \
-  --name vertex-nous \
-  --type google-vertex-ai \
-  --from-gcloud-adc \
-  --config VERTEX_AI_PROJECT_ID=<your-project> \
-  --config VERTEX_AI_REGION=us-east5
+  --name enmaas-nous \
+  --type openai-compatible \
+  --config OPENAI_BASE_URL=https://api.enmaas.devshift.net/v1 \
+  --config OPENAI_API_KEY=<your-api-key>
 ```
 
 ### Launch
@@ -71,20 +62,20 @@ openshell provider create \
 # Interactive
 openshell sandbox create \
   --from ghcr.io/aipcc/nous:latest \
-  --provider vertex-nous \
+  --provider enmaas-nous \
   --policy ./security/nous-policy.yaml
 
 # With web search policy (DuckDuckGo allowed)
 openshell sandbox create \
   --from ghcr.io/aipcc/nous:latest \
-  --provider vertex-nous \
+  --provider enmaas-nous \
   --policy ./security/nous-policy-websearch.yaml
 
 # Pipe a task
 echo 'Review PR https://github.com/OWNER/REPO/pull/NNN' | \
   openshell sandbox create \
   --from ghcr.io/aipcc/nous:latest \
-  --provider vertex-nous \
+  --provider enmaas-nous \
   --policy ./security/nous-policy.yaml \
   -- pi --print -
 ```
@@ -109,7 +100,7 @@ openshell policy update my-sandbox --policy ./security/nous-policy.yaml --dry-ru
 
 ## Integration test (no credentials needed)
 
-Runs the full stack against a local mock Vertex server:
+Runs the full stack against a local mock EnMaaS server:
 
 ```bash
 make integration

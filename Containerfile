@@ -44,9 +44,7 @@ USER 0
 
 ARG VERSION=0.1.0
 ARG NAME=nous
-ARG SUMMARY="Minimal pi harness with Vertex AI integration"
-# renovate: datasource=npm depName=pi-provider-vertex-anthropic
-ARG PI_PROVIDER_VERTEX_VERSION=0.1.3
+ARG SUMMARY="Minimal pi harness with EnMaaS integration"
 # renovate: datasource=npm depName=@alibaba-group/open-code-review
 ARG OPEN_CODE_REVIEW_VERSION=1.13.3
 
@@ -74,9 +72,11 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 COPY --from=rtk-builder /usr/local/bin/rtk /usr/local/bin/rtk
 
-# Install pi provider and tools, register rtk extension, fix sandbox ownership.
+# Install tools, register rtk extension, fix sandbox ownership.
+# The EnMaaS provider is registered by the router extension at boot —
+# the gateway speaks the OpenAI completions API that pi supports natively,
+# so no provider package is installed here.
 RUN mkdir -p /sandbox/.pi/agent/extensions \
-    && HOME=/sandbox pi install npm:pi-provider-vertex-anthropic@${PI_PROVIDER_VERTEX_VERSION} \
     && npm install -g --allow-scripts=@alibaba-group/open-code-review @alibaba-group/open-code-review@${OPEN_CODE_REVIEW_VERSION} \
     && HOME=/sandbox rtk init --agent pi --global --auto-patch \
     && chown -R 1001:0 /sandbox
@@ -88,14 +88,13 @@ ENV PATH="/sandbox/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:
 ENV AGENT_NAME=pi
 
 COPY --chown=1001:0 context/router/index.ts /sandbox/.pi/agent/extensions/router.ts
+COPY --chown=1001:0 context/router/enmaas.ts /sandbox/.pi/agent/extensions/router/enmaas.ts
 COPY --chown=1001:0 context/router/mcp.ts   /sandbox/.pi/agent/extensions/router/mcp.ts
 COPY --chown=1001:0 context/router/search.ts /sandbox/.pi/agent/extensions/router/search.ts
 COPY --chown=1001:0 context/router/model.ts  /sandbox/.pi/agent/extensions/router/model.ts
 COPY --chown=1001:0 context/router/wiki.ts   /sandbox/.pi/agent/extensions/router/wiki.ts
 COPY --chown=1001:0 context/settings.json /sandbox/.pi/agent/settings.json
 COPY --chown=1001:0 context/APPEND_SYSTEM.md /sandbox/.pi/agent/APPEND_SYSTEM.md
-# Also overlay the patched TS source (used if pi loads providers via jiti).
-COPY --chown=1001:0 context/vertex-api-patch.ts /sandbox/.pi/agent/npm/node_modules/pi-provider-vertex-anthropic/src/vertex-api.ts
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD []
