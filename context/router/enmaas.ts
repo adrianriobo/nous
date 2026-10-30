@@ -106,11 +106,8 @@ const CATALOG = [
 ];
 
 // ── Routing tiers ─────────────────────────────────────────────────────────────
-// Candidates ordered cheapest → most-capable. The gateway hosts GLM 5.3 and
-// DeepSeek V4.1 Flash free of charge, so they take the bottom tiers and the
-// plan-phase default. Paid frontier models serve only as retry escalation or
-// manual `--model` selection. This keeps monthly spend near zero under the
-// strict budget limit.
+// Candidates are ordered cheapest to most capable. Automatic routing uses
+// hosted models only. Manual tier or model selection can use a paid model.
 
 // Hosted models are pinned locally: the /v1/models response is
 // credential-dependent and can omit them even when inference works.
@@ -122,19 +119,23 @@ export const HOSTED_MODEL_IDS = new Set([
 export const TIER_CANDIDATES: Tier[] = [
   { provider: PROVIDER_ID, id: "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017" }, // free, fast
   { provider: PROVIDER_ID, id: "rits/zai-org/glm-5-3" },                      // free — plan default
-  { provider: PROVIDER_ID, id: "gpt-5.4-mini" },                              // paid — escalation
-  { provider: PROVIDER_ID, id: "gpt-6.1-terra" },                             // paid — escalation, manual high
+  { provider: PROVIDER_ID, id: "gpt-5.4-mini" },                              // paid — manual selection
+  { provider: PROVIDER_ID, id: "gpt-6.1-terra" },                             // paid — manual selection
 ];
 
 // Used when discovery cannot run (no key, network unavailable, timeout).
 export const FALLBACK_TIERS: Tier[] = TIER_CANDIDATES;
 
-// Cheap candidates preferred for the implement phase. Free hosted models
-// only: gemini chat-completions rejects the standard tool format on this
-// gateway, so the router never routes to gemini (see catalog note above).
+// Automatic routing uses these hosted models only. Availability is the
+// intersection of these lists, discovered tiers, and the model registry.
 export const CHEAP_CANDIDATES: Tier[] = [
-  { provider: PROVIDER_ID, id: "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017" },
-  { provider: PROVIDER_ID, id: "rits/zai-org/glm-5-3" },
+  { provider: PROVIDER_ID, id: MODEL_IDS.scout },
+  { provider: PROVIDER_ID, id: MODEL_IDS.reviewer },
+];
+
+export const PLAN_CANDIDATES: Tier[] = [
+  { provider: PROVIDER_ID, id: MODEL_IDS.reviewer },
+  { provider: PROVIDER_ID, id: MODEL_IDS.scout },
 ];
 
 // ── Boot-time model discovery ──────────────────────────────────────────────────
