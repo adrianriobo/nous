@@ -1,6 +1,6 @@
 # ── Global build args (must be before any FROM to be usable in FROM) ──────────
 # renovate: datasource=docker depName=quay.io/aipcc/base-images/agentic/pi
-ARG BASE_TAG=1.5.0
+ARG BASE_TAG=1.5.2
 ARG BASE_IMAGE=quay.io/aipcc/base-images/agentic/pi:${BASE_TAG}
 # renovate: datasource=github-releases depName=opendatahub-io/productization-skills
 ARG SKILLS_REF=v0.9.1
@@ -46,7 +46,7 @@ ARG VERSION=0.1.0
 ARG NAME=nous
 ARG SUMMARY="Minimal pi harness with EnMaaS integration"
 # renovate: datasource=npm depName=@alibaba-group/open-code-review
-ARG OPEN_CODE_REVIEW_VERSION=1.13.6
+ARG OPEN_CODE_REVIEW_VERSION=1.13.10
 
 LABEL io.openshell.sandbox.harness="pi" \
       io.openshell.harness.version="${VERSION}" \
