@@ -47,6 +47,7 @@ Replace the image name with `ghcr.io/adrianriobo/nous-productization:latest` for
 | Image contents, tags, and builds | [Images](docs/images.md) |
 | Podman, credentials, and OpenShell | [Running](docs/running.md) |
 | Wiki search and source ingestion | [Wiki](docs/wiki.md) |
+| Journal records and resume | [Journal](docs/journal.md) |
 | MCP configuration and tool discovery | [MCP servers](docs/mcp.md) |
 | Subagent roles and limits | [Subagents](docs/subagents.md) |
 | Builds, tests, and publishing | [CI](docs/ci.md) |

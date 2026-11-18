@@ -88,6 +88,7 @@ ENV PATH="/sandbox/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:
 ENV AGENT_NAME=pi
 
 COPY --chown=1001:0 context/router/ /sandbox/.pi/agent/extensions/router/
+COPY --chown=1001:0 context/journal/ /sandbox/.pi/agent/extensions/journal/
 COPY --chown=1001:0 context/settings.json /sandbox/.pi/agent/settings.json
 COPY --chown=1001:0 context/APPEND_SYSTEM.md /sandbox/.pi/agent/APPEND_SYSTEM.md
 

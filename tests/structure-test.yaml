@@ -45,6 +45,14 @@ fileExistenceTests:
     path: "/sandbox/.pi/agent/extensions/router/slack.ts"
     shouldExist: true
 
+  - name: "journal extension entry point"
+    path: "/sandbox/.pi/agent/extensions/journal/index.ts"
+    shouldExist: true
+
+  - name: "journal file helpers"
+    path: "/sandbox/.pi/agent/extensions/journal/journal.ts"
+    shouldExist: true
+
 fileContentTests:
   - name: "entrypoint handles interactive and passthrough modes"
     path: "/usr/local/bin/entrypoint.sh"
@@ -60,6 +68,13 @@ fileContentTests:
       - "/workspace/journal.md"
       - "### Resume Procedure"
       - "- status: open"
+
+  - name: "journal extension records the request and the tool calls"
+    path: "/sandbox/.pi/agent/extensions/journal/index.ts"
+    expectedContents:
+      - "pi.on(\"input\""
+      - "pi.on(\"tool_execution_end\""
+      - "name: \"journal\""
 
 commandTests:
   - name: "pi binary is on PATH"
