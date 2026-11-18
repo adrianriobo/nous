@@ -43,7 +43,7 @@ A child shares the parent filesystem, operating-system identity, and network pol
 | MCP discovery | Register tools from configured HTTP MCP servers. See [MCP servers](mcp.md). |
 | rtk-oss | Compress supported shell command output before pi receives it. Savings depend on the command and output. |
 
-The image also includes [`context/APPEND_SYSTEM.md`](../context/APPEND_SYSTEM.md). It provides common instructions for communication, work locations, wiki search, and code review. Task-specific instructions can add context.
+The image also includes [`context/APPEND_SYSTEM.md`](../context/APPEND_SYSTEM.md). It provides common instructions for communication, work locations, wiki search, code review, and the session journal. Task-specific instructions can add context.
 
 ## Network boundary
 

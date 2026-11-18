@@ -29,6 +29,33 @@ Private repositories and external services can require additional credentials. S
 
 See [wiki](wiki.md) for a wiki mount. See [MCP servers](mcp.md) for an MCP configuration. See [subagents](subagents.md) for Slack credentials.
 
+## Session journal
+
+The agent keeps a record of each request in `/workspace/journal.md`. The file is append-only. The agent reads the journal before each task. The agent adds an entry for each step. A record closes with the status `done`, `blocked`, or `handed-over`. See [`context/APPEND_SYSTEM.md`](../context/APPEND_SYSTEM.md#session-journal) for the protocol.
+
+The journal persists only when `/workspace` is a host mount. Without the mount, the agent uses `/sandbox/journal.md` and the file is lost when the container exits.
+
+Give the container user access to the mount. User `1001` creates the journal file.
+
+Resume the work after a container restart:
+
+```bash
+podman run --rm -it \
+  --env ENMAAS_BASE_URL \
+  --env ENMAAS_API_KEY \
+  -v /path/to/workspace:/workspace:z \
+  ghcr.io/adrianriobo/nous:latest \
+  --print 'Continue the work from /workspace/journal.md. Use the newest open record.'
+```
+
+List the records that are not closed:
+
+```bash
+grep -nE -- '- status: (open|blocked)' /path/to/workspace/journal.md
+```
+
+A record ID has the form `J-YYYYMMDD-NN`. Keep the journal file with the workspace artifacts. The journal adds context when you start a new session.
+
 ## Private certificate authority
 
 Mount a CA bundle for Node.js connections to internal services:
