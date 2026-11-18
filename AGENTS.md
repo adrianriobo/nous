@@ -9,6 +9,7 @@ nous packages [pi](https://github.com/earendil-works/pi) with an EnMaaS router a
 - Read [images](docs/images.md) for image contents and build targets.
 - Read [running](docs/running.md) for credentials and network policies.
 - Read [subagents](docs/subagents.md) for child roles and limits.
+- Read [journal](docs/journal.md) for the session records and the resume procedure.
 - Read [CI](docs/ci.md) for the checks and local tests.
 
 The Containerfile, source, and workflow define current behavior. Check them when you change the documentation.
@@ -29,3 +30,4 @@ Use [`context/APPEND_SYSTEM.md`](context/APPEND_SYSTEM.md) for the common instru
 - The OpenShell network policies apply only when you run the agent in OpenShell.
 - Productization tool installers can fail without failing the image build.
 - Wiki ingestion saves source documents. A separate processor updates curated pages.
+- The journal extension writes `/workspace/journal.md`. The agent closes a record with the `journal` tool. See [journal](docs/journal.md).

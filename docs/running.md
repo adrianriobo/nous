@@ -31,9 +31,9 @@ See [wiki](wiki.md) for a wiki mount. See [MCP servers](mcp.md) for an MCP confi
 
 ## Session journal
 
-The agent keeps a record of each request in `/workspace/journal.md`. The file is append-only. The agent reads the journal before each task. The agent adds an entry for each step. A record closes with the status `done`, `blocked`, or `handed-over`. See [`context/APPEND_SYSTEM.md`](../context/APPEND_SYSTEM.md#session-journal) for the protocol.
+The journal extension records each request in `/workspace/journal.md`. The extension adds an entry for each tool call and each final answer. The agent adds notes and closes the record with the `journal` tool. The file is append-only. A record closes with the status `done`, `blocked`, or `handed-over`. See [journal](journal.md) for the actions and the record format.
 
-The journal persists only when `/workspace` is a host mount. Without the mount, the agent uses `/sandbox/journal.md` and the file is lost when the container exits.
+The journal persists only when `/workspace` is a host mount. The extension uses the first writable path from `NOUS_JOURNAL`, `/workspace`, and `/sandbox`. Set `--env NOUS_JOURNAL=/workspace/journal.md` to fix the location. Without the mount, the journal is lost when the container exits.
 
 Give the container user access to the mount. User `1001` creates the journal file.
 
