@@ -69,12 +69,14 @@ fileContentTests:
       - "### Resume Procedure"
       - "- status: open"
 
+  # The needles have no regular-expression metacharacters: this check treats
+  # expectedContents as a pattern.
   - name: "journal extension records the request and the tool calls"
     path: "/sandbox/.pi/agent/extensions/journal/index.ts"
     expectedContents:
-      - "pi.on(\"input\""
-      - "pi.on(\"tool_execution_end\""
+      - "tool_execution_end"
       - "name: \"journal\""
+      - "session-journal-state"
 
 commandTests:
   - name: "pi binary is on PATH"
