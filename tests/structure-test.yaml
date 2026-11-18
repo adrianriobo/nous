@@ -52,6 +52,15 @@ fileContentTests:
       - "_check_auth"
       - "exec pi"
 
+  # The journal protocol keeps the work state across container restarts.
+  - name: "system instructions include the session journal protocol"
+    path: "/sandbox/.pi/agent/APPEND_SYSTEM.md"
+    expectedContents:
+      - "## Session Journal"
+      - "/workspace/journal.md"
+      - "### Resume Procedure"
+      - "- status: open"
+
 commandTests:
   - name: "pi binary is on PATH"
     command: "bash"
