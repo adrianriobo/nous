@@ -342,6 +342,34 @@ jobs:
             -w /workspace/nous \
             nous:test -c 'node --test --test-timeout=30000 tests/journal.test.mjs'
 
+  # ── Window title tests ─────────────────────────────────────────────────────
+  title-tests:
+    name: Title — Window Title Tests
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: nous-image
+          path: /tmp
+
+      - name: Load image
+        run: podman load -i /tmp/nous-test.tar
+
+      - name: Run title tests
+        run: |
+          podman run --rm \
+            --entrypoint /bin/bash \
+            -v "$PWD:/workspace/nous:ro,z" \
+            -w /workspace/nous \
+            nous:test -c 'node --test tests/title.test.mjs'
+
   # ── Subagent tests ─────────────────────────────────────────────────────────
   subagent-tests:
     name: Subagents — Model and Safety Tests
