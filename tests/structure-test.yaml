@@ -53,6 +53,10 @@ fileExistenceTests:
     path: "/sandbox/.pi/agent/extensions/journal/journal.ts"
     shouldExist: true
 
+  - name: "window title extension entry point"
+    path: "/sandbox/.pi/agent/extensions/title/index.ts"
+    shouldExist: true
+
 fileContentTests:
   - name: "entrypoint handles interactive and passthrough modes"
     path: "/usr/local/bin/entrypoint.sh"

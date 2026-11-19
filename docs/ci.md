@@ -25,12 +25,13 @@ CI publishes both images on pushes to `main` and version tags. It also publishes
 
 ## Run tests locally
 
-Run the router, subagent, and journal tests with a compatible Node.js and pi installation:
+Run the router, subagent, journal, and title tests with a compatible Node.js and pi installation:
 
 ```bash
 node --test tests/router.test.mjs
 node --test --test-timeout=30000 tests/subagent.test.mjs
 node --test tests/journal.test.mjs
+node --test tests/title.test.mjs
 ```
 
 Run `make integration` to build the image and exercise the mock gateway with Podman. `make test` runs the container structure tests against a built image. See [`Makefile`](../Makefile) for prerequisites and image tag defaults.
