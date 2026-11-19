@@ -12,6 +12,7 @@ The build job creates both image targets. It runs container structure tests and 
 | Subagents — Model and Safety Tests | Test subagent roles and limits in the base image. |
 | Router — Model Selection Tests | Test hosted routing, paid escalation, and retries in the base image. |
 | Journal — Record and Resume Tests | Test journal records, status changes, and resume in the base image. |
+| Title — Window Title Tests | Test `NOUS_TITLE` and the `/title` command in the base image. |
 | MCP — Tool Discovery | Test MCP discovery with mock servers. |
 | Skills — Productization Image | Check productization skills and selected tools. |
 | OpenShell Egress Enforcement | Test allowed and blocked network access. |
