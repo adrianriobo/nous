@@ -83,6 +83,8 @@ The title needs a TTY. Use `podman run -t`. tmux shows the title only with `set 
 
 The extension removes control characters from the value. Keep the value on one line.
 
+pi writes its own title after the extension writes the custom title. The extension rewrites each title sequence that pi writes. The custom title therefore shows at startup, without `/reload`. The title stays after `/name`, `/reload`, and a session switch.
+
 ## Private certificate authority
 
 Mount a CA bundle for Node.js connections to internal services:
