@@ -13,6 +13,7 @@ nous combines model routing, research tools, and container images for engineerin
 - **Model routing:** `router/auto` starts on a hosted EnMaaS model. It escalates to a paid model for very complex requests and after hosted retries fail. Set `NOUS_PAID_ESCALATION=off` to block this escalation. See [routing and costs](docs/architecture.md#model-routing).
 - **Subagents:** Request a separate model for repository review, wiki research, or Slack thread analysis. A paid advanced reviewer requires interactive confirmation. See [subagents](docs/subagents.md).
 - **Knowledge and research:** Search a mounted [OKF 2.0 wiki](docs/wiki.md), use DuckDuckGo, or connect [MCP servers](docs/mcp.md). The wiki can also receive source documents for a separate processor.
+- **Window title:** Set `NOUS_TITLE` to name the terminal tab, or use `/title` during a session. See [running](docs/running.md#window-title).
 - **Code review:** [Alibaba open-code-review](https://github.com/alibaba/open-code-review) supplies rule-based guidance. The agent then inspects the changes and verifies the findings.
 - **Smaller tool output:** [rtk-oss](https://github.com/rtk-ai/rtk) compresses supported shell output before the agent reads it.
 - **Network controls:** [OpenShell](https://github.com/NVIDIA/OpenShell) can enforce egress policies. A plain Podman run does not apply these policies. See [running nous](docs/running.md#nvidia-openshell).
