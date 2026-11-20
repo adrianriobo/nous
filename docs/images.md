@@ -15,6 +15,8 @@ The productization image includes [productization-skills](https://github.com/ope
 
 The skills builder installs its CLI tools. Examples include `gh`, `glab`, `kubectl`, `kustomize`, `tkn`, `acli`, and `gws`. An installer failure fails the image build. The build log names each failure after the marker `[nous-build] FAILED` and lists all failures at the end. External services can require credentials and network access.
 
+The build arg `TOOL_FAILURE_ALLOWLIST` names the tools that can fail without stopping the build. The default list is `google-workspace-cli` and `python`. The build log marks these tools with `[nous-build] allowed failure`. Remove a name from the list when the upstream installer works again.
+
 ## Tags
 
 On a push to `main` that starts CI, the workflow publishes `latest` and the commit SHA for the base image. Documentation-only branch pushes do not start CI. A version-tag build publishes the version, commit SHA, and `latest` tags. The productization image uses a tag that combines the skills version and the nous version or commit SHA. For example, `0.9.1-0.3.0` identifies skills `v0.9.1` and nous `v0.3.0`.

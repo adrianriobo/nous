@@ -32,6 +32,6 @@ Use `command -v <tool>` to check a tool. `command -v` is a shell builtin, so it 
 - The main router escalates to paid models without a dialog. Set `NOUS_PAID_ESCALATION=off` to block it. See [model routing](docs/architecture.md#model-routing).
 - Subagent tool lists are not security sandboxes. Child processes share the parent environment.
 - The OpenShell network policies apply only when you run the agent in OpenShell.
-- A productization tool installer failure fails the image build. Check the build log for `[nous-build] installer failures`.
+- A productization tool installer failure fails the image build, unless `TOOL_FAILURE_ALLOWLIST` names the tool. Check the build log for `[nous-build] installer failures`.
 - Wiki ingestion saves source documents. A separate processor updates curated pages.
 - The journal extension writes `/workspace/journal.md`. The agent closes a record with the `journal` tool. See [journal](docs/journal.md).
