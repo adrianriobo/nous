@@ -20,10 +20,19 @@ RUN dnf install -y --allowerasing --setopt=install_weak_deps=False \
     && bash -euc '\
         export TARGETARCH=$(uname -m | sed "s/x86_64/amd64/;s/aarch64/arm64/"); \
         src=/productization-skills/productization-plugin/tools; \
+        failed=""; \
         for f in "$src"/*/install.sh; do \
-          echo "[nous-build] installing: $(basename $(dirname $f))"; \
-          bash "$f" || true; \
-        done' \
+          name=$(basename "$(dirname "$f")"); \
+          echo "[nous-build] installing: $name"; \
+          if ! bash "$f"; then \
+            echo "[nous-build] FAILED: $name"; \
+            failed="$failed $name"; \
+          fi; \
+        done; \
+        if [ -n "$failed" ]; then \
+          echo "[nous-build] installer failures:$failed"; \
+          exit 1; \
+        fi' \
     && mkdir -p /opt/nous-tools \
     && find /usr/local/bin -maxdepth 1 -type f -executable \
          -exec cp -t /opt/nous-tools {} + 2>/dev/null || true
@@ -37,6 +46,27 @@ RUN mkdir -p /tmp/rtk-install \
     && curl -fsSL "https://github.com/rtk-ai/rtk/releases/download/${RTK_VERSION}/rtk-oss-x86_64-unknown-linux-musl.tar.gz" \
        | tar -xzf - -C /tmp/rtk-install \
     && find /tmp/rtk-install -name 'rtk' -type f -exec install -m 755 {} /usr/local/bin/rtk \;
+
+# ── Base utilities builder ────────────────────────────────────────────────────
+# The pi base image is Hummingbird OS. It has no package manager and no common
+# base utilities, so `command -v which` returns nothing and agents report false
+# missing-tool blockers. This stage installs the utilities from UBI9 and stages
+# each binary together with the shared libraries it needs. The final image
+# uses its own (newer) glibc, so the glibc libraries stay out of the bundle.
+FROM registry.access.redhat.com/ubi9/ubi:latest AS base-utils
+RUN dnf install -y --allowerasing --setopt=install_weak_deps=False \
+      which curl procps-ng openssl bind-utils \
+    && mkdir -p /opt/base-utils/bin /opt/base-utils/lib \
+    && for tool in which curl ps openssl dig host nslookup; do \
+         cp -L "$(command -v ${tool})" "/opt/base-utils/bin/${tool}"; \
+       done \
+    && for binary in /opt/base-utils/bin/*; do ldd "$binary" 2>/dev/null || true; done \
+         | awk '/=> \// { print $3 }' \
+         | grep -Ev '/(libc|libm|libmvec|libpthread|libdl|librt|libresolv|libutil|libanl|libnsl|libthread_db|libBrokenLocale)\.so' \
+         | sort -u \
+         | xargs -r cp -L -t /opt/base-utils/lib \
+    && test -s /opt/base-utils/lib/libssl.so.3 \
+    && test -n "$(ls -A /opt/base-utils/lib)"
 
 # ── Base nous image ────────────────────────────────────────────────────────────
 FROM ${BASE_IMAGE} AS nous
@@ -71,6 +101,26 @@ COPY context/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 COPY --from=rtk-builder /usr/local/bin/rtk /usr/local/bin/rtk
+
+# Add the base utilities. Each utility is a thin wrapper that points the dynamic
+# loader at the staged libraries, so the utilities never mix their own glibc
+# with the glibc of the base image.
+COPY --from=base-utils /opt/base-utils/ /opt/base-utils/
+RUN set -eux \
+    && for binary in /opt/base-utils/bin/*; do \
+         name=$(basename "$binary"); \
+         printf '#!/bin/sh\nexec env LD_LIBRARY_PATH=/opt/base-utils/lib "%s" "$@"\n' "$binary" \
+           > "/usr/local/bin/${name}"; \
+         chmod 0755 "/usr/local/bin/${name}"; \
+       done \
+    && for name in which curl ps openssl dig host nslookup; do \
+         test -x "/usr/local/bin/${name}"; \
+       done \
+    && /usr/local/bin/openssl version \
+    && /usr/local/bin/curl --version >/dev/null \
+    && /usr/local/bin/ps -o pid= -p 1 >/dev/null \
+    && /usr/local/bin/dig -v >/dev/null \
+    && /usr/local/bin/which /bin/bash >/dev/null
 
 # Install tools, register rtk extension, fix sandbox ownership.
 # The EnMaaS provider is registered by the router extension at boot —

@@ -526,6 +526,15 @@ jobs:
           fi
           echo "PASS: all expected tool binaries present"
 
+      # Issue #52: an agent must find a utility and an installed tool with both
+      # `command -v` and `which`.
+      - name: "Test: base utilities and which resolve tools"
+        run: |
+          podman run --rm --entrypoint /bin/bash \
+            nous:productization-test \
+            -c 'command -v which curl ps openssl && which acli jq'
+          echo "PASS: base utilities present and which resolves installed tools"
+
       - name: "Test: pi starts and reports skills path"
         run: |
           node tests/mock-enmaas-server.mjs &
