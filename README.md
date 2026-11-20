@@ -15,6 +15,7 @@ nous combines model routing, research tools, and container images for engineerin
 - **Knowledge and research:** Search a mounted [OKF 2.0 wiki](docs/wiki.md), use DuckDuckGo, or connect [MCP servers](docs/mcp.md). The wiki can also receive source documents for a separate processor.
 - **Window title:** Set `NOUS_TITLE` to name the terminal tab, or use `/title` during a session. See [running](docs/running.md#window-title).
 - **Code review:** [Alibaba open-code-review](https://github.com/alibaba/open-code-review) supplies rule-based guidance. The agent then inspects the changes and verifies the findings.
+- **Self review:** After a run changes a file, the `self-review` extension adds one reminder before the final answer. The reminder is not a hard block. Set `NOUS_SELF_REVIEW=off` to disable it. See [self review](docs/running.md#self-review).
 - **Smaller tool output:** [rtk-oss](https://github.com/rtk-ai/rtk) compresses supported shell output before the agent reads it.
 - **Network controls:** [OpenShell](https://github.com/NVIDIA/OpenShell) can enforce egress policies. A plain Podman run does not apply these policies. See [running nous](docs/running.md#nvidia-openshell).
 

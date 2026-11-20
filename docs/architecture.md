@@ -43,8 +43,9 @@ A child shares the parent filesystem, operating-system identity, and network pol
 | MCP discovery | Register tools from configured HTTP MCP servers. See [MCP servers](mcp.md). |
 | rtk-oss | Compress supported shell command output before pi receives it. Savings depend on the command and output. |
 | Session journal | Write each request and each tool call to `/workspace/journal.md`. Resume after a container restart. See [journal](journal.md). |
+| Self review | Add one reminder at the last boundary when a run changes a file and no review ran. Set `NOUS_SELF_REVIEW=off` to disable it. See [self review](running.md#self-review). |
 
-The image also includes [`context/APPEND_SYSTEM.md`](../context/APPEND_SYSTEM.md). It provides common instructions for communication, work locations, wiki search, code review, and the session journal. Task-specific instructions can add context.
+The image also includes [`context/APPEND_SYSTEM.md`](../context/APPEND_SYSTEM.md). It provides common instructions for communication, work locations, wiki search, code review, self review, and the session journal. Task-specific instructions can add context.
 
 ## Network boundary
 
