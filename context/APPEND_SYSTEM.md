@@ -53,6 +53,25 @@ When the user asks to review a PR, MR, or code changes, always run `code_review`
 
 `code_review` runs a deterministic rule engine. It catches issues that LLM analysis can miss (style violations, anti-patterns, security rules). Always run it before your own review.
 
+## Self Review
+
+Run a self review after you change a file. Run it before the final answer. Do not review a read-only run: an analysis, a wiki page, a Jira or Slack query, or a plain answer.
+
+1. List the changed files with `git status --porcelain` and the diff.
+2. Call `code_review(mode: "preview")` from the repository root. Use repository-relative paths. An absolute path gives an `ocr` error.
+3. Call `code_review(files: [...])` for the selected files.
+4. Read each flagged file. Add your own analysis. Check these items:
+   - A renamed or removed symbol: search the old name in the code and the documents.
+   - A new option or flag: search the documents and the tables.
+   - A pull request or merge request body: compare it with the final diff.
+5. Fix the blocking findings in the same run.
+6. Run the tests for the change again.
+7. Report one short table: finding, action, result.
+
+The `self-review` extension adds one reminder when a run changes a file and no `code_review` call ran. The reminder is not a hard block. Pi cannot stop the answer. The review is one check. It does not guarantee correct code.
+
+Set `NOUS_SELF_REVIEW=off` to disable the reminder. The default value is `auto`.
+
 ## Startup Procedure
 
 Before starting any task, follow these steps in order:

@@ -85,6 +85,16 @@ The extension removes control characters from the value. Keep the value on one l
 
 pi writes its own title after the extension writes the custom title. The extension rewrites each title sequence that pi writes. The custom title therefore shows at startup, without `/reload`. The title stays after `/name`, `/reload`, and a session switch.
 
+## Self review
+
+The `self-review` extension adds one reminder when a run changes a file and no `code_review` call ran. The reminder arrives at the last boundary, before the final answer. It tells the agent to review the diff, to fix the blocking findings, and to answer after that.
+
+The extension records a baseline at the start of each request: `git rev-parse HEAD` and `git status --porcelain`. A run is a change when the baseline differs at the end, or when `edit` or `write` succeeded. A dirty file from an earlier session is part of the baseline, so it does not start a reminder.
+
+The reminder is not a hard block. Pi cannot stop the answer. The extension requests one continuation, and it does not repeat the reminder in the same run. A review is one check. It does not guarantee correct code. See [architecture](architecture.md#built-in-tools).
+
+Set `NOUS_SELF_REVIEW=off` to disable the reminder. The default value is `auto`. A handler error writes one line to stderr and does not stop the run.
+
 ## Private certificate authority
 
 Mount a CA bundle for Node.js connections to internal services:

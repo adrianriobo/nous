@@ -12,6 +12,7 @@ The build job creates both image targets. It runs container structure tests and 
 | Subagents — Model and Safety Tests | Test subagent roles and limits in the base image. |
 | Router — Model Selection Tests | Test hosted routing, paid escalation, and retries in the base image. |
 | Journal — Record and Resume Tests | Test journal records, status changes, and resume in the base image. |
+| Self Review — Extension Tests | Test the one-reminder rule, the run baseline, and the error guard in the base image. |
 | Title — Window Title Tests | Test `NOUS_TITLE` and the `/title` command in the base image. |
 | MCP — Tool Discovery | Test MCP discovery with mock servers. |
 | Skills — Productization Image | Check productization skills, base utilities, and selected tools. |
@@ -26,13 +27,14 @@ CI publishes both images on pushes to `main` and version tags. It also publishes
 
 ## Run tests locally
 
-Run the router, subagent, journal, and title tests with a compatible Node.js and pi installation:
+Run the router, subagent, journal, title, and self-review tests with a compatible Node.js and pi installation:
 
 ```bash
 node --test tests/router.test.mjs
 node --test --test-timeout=30000 tests/subagent.test.mjs
 node --test tests/journal.test.mjs
 node --test tests/title.test.mjs
+node --test tests/self-review.test.mjs
 ```
 
 Run `make integration` to build the image and exercise the mock gateway with Podman. `make test` runs the container structure tests against a built image. See [`Makefile`](../Makefile) for prerequisites and image tag defaults.

@@ -53,6 +53,14 @@ fileExistenceTests:
     path: "/sandbox/.pi/agent/extensions/journal/journal.ts"
     shouldExist: true
 
+  - name: "self review extension entry point"
+    path: "/sandbox/.pi/agent/extensions/self-review/index.ts"
+    shouldExist: true
+
+  - name: "self review helpers"
+    path: "/sandbox/.pi/agent/extensions/self-review/state.ts"
+    shouldExist: true
+
   - name: "window title extension entry point"
     path: "/sandbox/.pi/agent/extensions/title/index.ts"
     shouldExist: true
@@ -81,6 +89,20 @@ fileContentTests:
       - "tool_execution_end"
       - "name: \"journal\""
       - "session-journal-state"
+
+  # The self-review extension adds one reminder at the last boundary.
+  - name: "self review extension registers the settle boundary"
+    path: "/sandbox/.pi/agent/extensions/self-review/index.ts"
+    expectedContents:
+      - "agent_before_settle"
+      - "custom_message"
+      - "reviewEnabled"
+
+  - name: "system instructions include the self review procedure"
+    path: "/sandbox/.pi/agent/APPEND_SYSTEM.md"
+    expectedContents:
+      - "## Self Review"
+      - "NOUS_SELF_REVIEW"
 
   - name: "system instructions tell agents how to find a tool"
     path: "/sandbox/.pi/agent/APPEND_SYSTEM.md"

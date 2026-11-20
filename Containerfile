@@ -151,6 +151,7 @@ ENV AGENT_NAME=pi
 
 COPY --chown=1001:0 context/router/ /sandbox/.pi/agent/extensions/router/
 COPY --chown=1001:0 context/journal/ /sandbox/.pi/agent/extensions/journal/
+COPY --chown=1001:0 context/self-review/ /sandbox/.pi/agent/extensions/self-review/
 COPY --chown=1001:0 context/title/ /sandbox/.pi/agent/extensions/title/
 COPY --chown=1001:0 context/settings.json /sandbox/.pi/agent/settings.json
 COPY --chown=1001:0 context/APPEND_SYSTEM.md /sandbox/.pi/agent/APPEND_SYSTEM.md

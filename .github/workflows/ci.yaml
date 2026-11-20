@@ -342,6 +342,36 @@ jobs:
             -w /workspace/nous \
             nous:test -c 'node --test --test-timeout=30000 tests/journal.test.mjs'
 
+  # ── Self review tests ──────────────────────────────────────────────────────────
+  # Checks the one-reminder rule, the Git baseline, and the error guard. The tests
+  # use temporary repositories, so they need no workspace mount of their own.
+  self-review-tests:
+    name: Self Review — Extension Tests
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: nous-image
+          path: /tmp
+
+      - name: Load image
+        run: podman load -i /tmp/nous-test.tar
+
+      - name: Run self review tests
+        run: |
+          podman run --rm \
+            --entrypoint /bin/bash \
+            -v "$PWD:/workspace/nous:ro,z" \
+            -w /workspace/nous \
+            nous:test -c 'node --test --test-timeout=30000 tests/self-review.test.mjs'
+
   # ── Window title tests ─────────────────────────────────────────────────────
   title-tests:
     name: Title — Window Title Tests
