@@ -23,11 +23,15 @@ The Containerfile, source, and workflow define current behavior. Check them when
 
 Use [`context/APPEND_SYSTEM.md`](context/APPEND_SYSTEM.md) for the common instructions included in the image. It is separate from this repository guidance.
 
+## Tool discovery
+
+Use `command -v <tool>` to check a tool. `command -v` is a shell builtin, so it is always available. The image also provides `which`, `curl`, `ps`, `openssl`, `dig`, `host`, and `nslookup`. Use `command -v` before `which`.
+
 ## Important limits
 
 - The main router escalates to paid models without a dialog. Set `NOUS_PAID_ESCALATION=off` to block it. See [model routing](docs/architecture.md#model-routing).
 - Subagent tool lists are not security sandboxes. Child processes share the parent environment.
 - The OpenShell network policies apply only when you run the agent in OpenShell.
-- Productization tool installers can fail without failing the image build.
+- A productization tool installer failure fails the image build. Check the build log for `[nous-build] installer failures`.
 - Wiki ingestion saves source documents. A separate processor updates curated pages.
 - The journal extension writes `/workspace/journal.md`. The agent closes a record with the `journal` tool. See [journal](docs/journal.md).

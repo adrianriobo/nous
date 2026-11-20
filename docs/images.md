@@ -9,9 +9,11 @@ The [`Containerfile`](../Containerfile) defines two image targets. CI publishes 
 
 The base image builds from `quay.io/aipcc/base-images/agentic/pi`. It installs [Alibaba open-code-review](https://github.com/alibaba/open-code-review) and [rtk-oss](https://github.com/rtk-ai/rtk). The Containerfile pins their versions.
 
+The base image also provides the common utilities that Hummingbird OS omits. The list is `which`, `curl`, `ps`, `openssl`, `dig`, `host`, and `nslookup`. A separate builder stage installs them from UBI9 and stages the shared libraries that the binaries need. The image keeps its own glibc. Each utility is a small wrapper in `/usr/local/bin` that sets `LD_LIBRARY_PATH` to `/opt/base-utils/lib`. Use `command -v <tool>` to find a tool.
+
 The productization image includes [productization-skills](https://github.com/opendatahub-io/productization-skills). These cover Jira, GitLab, Konflux, Slack, Google Workspace, AWS logs, and infrastructure provisioning. `SKILLS_REF` selects the skills release at build time.
 
-The skills builder attempts to install its CLI tools. Examples include `gh`, `glab`, `kubectl`, `kustomize`, `tkn`, `acli`, and `gws`. An installer failure does not fail the image build. Check the build log or the image when a specific tool is required. External services can require credentials and network access.
+The skills builder installs its CLI tools. Examples include `gh`, `glab`, `kubectl`, `kustomize`, `tkn`, `acli`, and `gws`. An installer failure fails the image build. The build log names each failure after the marker `[nous-build] FAILED` and lists all failures at the end. External services can require credentials and network access.
 
 ## Tags
 

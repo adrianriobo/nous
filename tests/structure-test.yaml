@@ -82,6 +82,12 @@ fileContentTests:
       - "name: \"journal\""
       - "session-journal-state"
 
+  - name: "system instructions tell agents how to find a tool"
+    path: "/sandbox/.pi/agent/APPEND_SYSTEM.md"
+    expectedContents:
+      - "## Tool Discovery"
+      - "command -v"
+
 commandTests:
   - name: "pi binary is on PATH"
     command: "bash"
@@ -94,3 +100,23 @@ commandTests:
     exitCode: 0
     expectedOutput:
       - "1001"
+
+  # Hummingbird OS has no package manager and no base utilities. These checks
+  # guard issue #52: an agent must find each utility with `command -v`.
+  - name: "base utilities are on PATH"
+    command: "bash"
+    args: ["-c", "command -v which curl ps openssl dig host nslookup"]
+    exitCode: 0
+
+  - name: "base utilities run"
+    command: "bash"
+    args: ["-c", "curl --version && openssl version && ps --version && dig -v"]
+    exitCode: 0
+
+  - name: "which resolves a tool that is in PATH"
+    command: "bash"
+    args: ["-c", "which bash node"]
+    exitCode: 0
+    expectedOutput:
+      - "bash"
+      - "node"

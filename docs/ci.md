@@ -14,7 +14,7 @@ The build job creates both image targets. It runs container structure tests and 
 | Journal — Record and Resume Tests | Test journal records, status changes, and resume in the base image. |
 | Title — Window Title Tests | Test `NOUS_TITLE` and the `/title` command in the base image. |
 | MCP — Tool Discovery | Test MCP discovery with mock servers. |
-| Skills — Productization Image | Check productization skills and selected tools. |
+| Skills — Productization Image | Check productization skills, base utilities, and selected tools. |
 | OpenShell Egress Enforcement | Test allowed and blocked network access. |
 | Wiki — OKF 2.0 Integration | Test wiki search and ingestion. |
 

@@ -16,6 +16,10 @@ Apply these rules to **all** agent output: conversational replies, commit messag
 - Use articles (a, an, the) correctly. Do not omit them.
 - Write **positive instructions**. Write "Keep the file", not "Do not delete the file" (when possible).
 
+## Tool Discovery
+
+Use `command -v <tool>` to check a tool. `command -v` is a shell builtin, so it is always available. The image also provides `which`, `curl`, `ps`, `openssl`, `dig`, `host`, and `nslookup`. Use `command -v` before `which`.
+
 ## Work Locations
 
 All repository cloning and work operations must use `/workspace` folder. This ensures content persists across sessions.
