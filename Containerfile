@@ -12,12 +12,19 @@ ARG RTK_VERSION=v1.2.1
 # in a fully-equipped UBI image; binaries are staged for the productization target.
 FROM registry.access.redhat.com/ubi9/ubi:latest AS skills-builder
 ARG SKILLS_REF
+# Tools whose installer fails today. The installer still runs and the build log
+# still records the failure, but the failure does not stop the build. Remove a
+# name when the upstream installer works again.
+#   google-workspace-cli: the gws installer cannot verify its own download.
+#   python: the requirements pin requests>=2.34.2, which does not exist.
+# The productization image installs its own Python 3.12 with uv.
+ARG TOOL_FAILURE_ALLOWLIST="google-workspace-cli python"
 RUN dnf install -y --allowerasing --setopt=install_weak_deps=False \
       curl git tar gzip unzip python3 \
     && git clone --depth=1 --branch="${SKILLS_REF}" \
          https://github.com/opendatahub-io/productization-skills \
          /productization-skills \
-    && bash -euc '\
+    && TOOL_FAILURE_ALLOWLIST="${TOOL_FAILURE_ALLOWLIST}" bash -euc '\
         export TARGETARCH=$(uname -m | sed "s/x86_64/amd64/;s/aarch64/arm64/"); \
         src=/productization-skills/productization-plugin/tools; \
         failed=""; \
@@ -25,8 +32,13 @@ RUN dnf install -y --allowerasing --setopt=install_weak_deps=False \
           name=$(basename "$(dirname "$f")"); \
           echo "[nous-build] installing: $name"; \
           if ! bash "$f"; then \
-            echo "[nous-build] FAILED: $name"; \
-            failed="$failed $name"; \
+            case " ${TOOL_FAILURE_ALLOWLIST} " in \
+              *" $name "*) \
+                echo "[nous-build] allowed failure: $name (see TOOL_FAILURE_ALLOWLIST)";; \
+              *) \
+                echo "[nous-build] FAILED: $name"; \
+                failed="$failed $name";; \
+            esac; \
           fi; \
         done; \
         if [ -n "$failed" ]; then \
@@ -34,8 +46,8 @@ RUN dnf install -y --allowerasing --setopt=install_weak_deps=False \
           exit 1; \
         fi' \
     && mkdir -p /opt/nous-tools \
-    && find /usr/local/bin -maxdepth 1 -type f -executable \
-         -exec cp -t /opt/nous-tools {} + 2>/dev/null || true
+    && { find /usr/local/bin -maxdepth 1 -type f -executable \
+         -exec cp -t /opt/nous-tools {} + 2>/dev/null || true; }
 
 # ── RTK builder ───────────────────────────────────────────────────────────────
 # Downloads the rtk-oss static binary from GitHub releases. UBI has curl;
