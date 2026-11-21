@@ -88,7 +88,7 @@ ARG VERSION=0.1.0
 ARG NAME=nous
 ARG SUMMARY="Minimal pi harness with EnMaaS integration"
 # renovate: datasource=npm depName=@alibaba-group/open-code-review
-ARG OPEN_CODE_REVIEW_VERSION=1.13.13
+ARG OPEN_CODE_REVIEW_VERSION=1.14.0
 
 LABEL io.openshell.sandbox.harness="pi" \
       io.openshell.harness.version="${VERSION}" \
