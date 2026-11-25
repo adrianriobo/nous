@@ -22,6 +22,7 @@ ENTRYPOINT="/usr/local/bin/entrypoint.sh"
 
 VARIANT="nous"
 TAG="latest"
+IMAGE_REPO=""
 SANDBOX_NAME=""
 WORKSPACE=""
 UPLOAD=1
@@ -40,6 +41,7 @@ Usage:
 
 Options:
   --productization     Use the nous-productization image.
+  --image REPO         Image repository. Default: ghcr.io/adrianriobo/nous.
   --tag TAG            Image tag. Default: latest.
   --name NAME          Sandbox name. Default: nous or nous-productization.
   --workspace DIR      Upload DIR to the sandbox workspace. Default: PWD.
@@ -100,6 +102,11 @@ parse_args() {
         case "$1" in
             --productization)
                 VARIANT="nous-productization"
+                ;;
+            --image)
+                need "--image" "${2:-}"
+                IMAGE_REPO="$2"
+                shift
                 ;;
             --tag)
                 need "--tag" "${2:-}"
@@ -282,17 +289,21 @@ write_policy() {
 }
 
 resolve_image() {
-    case "${VARIANT}" in
-        nous)
-            IMAGE="${IMAGE_BASE}:${TAG}"
-            ;;
-        nous-productization)
-            IMAGE="${IMAGE_PRODUCTIZATION}:${TAG}"
-            ;;
-        *)
-            die "Unknown image variant: ${VARIANT}"
-            ;;
-    esac
+    if [ -n "${IMAGE_REPO}" ]; then
+        IMAGE="${IMAGE_REPO}:${TAG}"
+    else
+        case "${VARIANT}" in
+            nous)
+                IMAGE="${IMAGE_BASE}:${TAG}"
+                ;;
+            nous-productization)
+                IMAGE="${IMAGE_PRODUCTIZATION}:${TAG}"
+                ;;
+            *)
+                die "Unknown image variant: ${VARIANT}"
+                ;;
+        esac
+    fi
     if [ -z "${SANDBOX_NAME}" ]; then
         SANDBOX_NAME="${VARIANT}"
     fi
@@ -337,12 +348,25 @@ create_sandbox() {
         --label "nous.variant=${VARIANT}" \
         --label "nous.image=${IMAGE}" \
         -- "${ENTRYPOINT}"
+    wait_ready
     if [ "${UPLOAD}" -eq 1 ]; then
         info "Upload the contents of ${WORKSPACE} to /sandbox."
         # A "." source copies the folder contents. A folder path would copy
         # the folder itself into /sandbox.
         ( cd "${WORKSPACE}" && run openshell sandbox upload "${SANDBOX_NAME}" . /sandbox )
     fi
+}
+
+# The sandbox needs some seconds before it accepts a command or an upload.
+wait_ready() {
+    local attempt=1
+    while ! run openshell sandbox exec "${SANDBOX_NAME}" -- true >/dev/null 2>&1; do
+        if [ "${attempt}" -ge 10 ]; then
+            die "The sandbox ${SANDBOX_NAME} is not ready. Check: openshell logs ${SANDBOX_NAME} --tail"
+        fi
+        attempt=$((attempt + 1))
+        sleep 3
+    done
 }
 
 prepare_sandbox() {
@@ -376,6 +400,7 @@ start_sandbox() {
 
 run_task() {
     start_sandbox
+    wait_ready
     run openshell sandbox exec "${SANDBOX_NAME}" -- pi --print "${TASK}"
 }
 
