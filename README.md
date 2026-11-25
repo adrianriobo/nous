@@ -17,7 +17,7 @@ nous combines model routing, research tools, and container images for engineerin
 - **Code review:** [Alibaba open-code-review](https://github.com/alibaba/open-code-review) supplies rule-based guidance. The agent then inspects the changes and verifies the findings.
 - **Self review:** After a run changes a file, the `self-review` extension adds one reminder before the final answer. The reminder is not a hard block. Set `NOUS_SELF_REVIEW=off` to disable it. See [self review](docs/running.md#self-review).
 - **Smaller tool output:** [rtk-oss](https://github.com/rtk-ai/rtk) compresses supported shell output before the agent reads it.
-- **Network controls:** [OpenShell](https://github.com/NVIDIA/OpenShell) can enforce egress policies. A plain Podman run does not apply these policies. See [running nous](docs/running.md#nvidia-openshell).
+- **Network controls:** [OpenShell](https://github.com/ai-openshell/openshell) enforces an egress policy. A plain Podman run does not apply a policy. Start a sandbox with `./scripts/nous-openshell.sh`. See [OpenShell](docs/openshell.md).
 
 ## Image variants
 
@@ -30,7 +30,9 @@ The productization tools support workflows for Jira, GitLab, Konflux, Slack, Goo
 
 ## Quick start
 
-Set `ENMAAS_BASE_URL` and `ENMAAS_API_KEY` in your environment. Then run:
+Set `ENMAAS_BASE_URL` and `ENMAAS_API_KEY` in your environment.
+
+### Podman
 
 ```bash
 podman run --rm -it \
@@ -39,7 +41,18 @@ podman run --rm -it \
   ghcr.io/adrianriobo/nous:latest
 ```
 
-Replace the image name with `ghcr.io/adrianriobo/nous-productization:latest` for productization workflows. Mount `/workspace` to keep work across container runs. See [running nous](docs/running.md) for mounts, credentials, and OpenShell.
+Replace the image name with `ghcr.io/adrianriobo/nous-productization:latest` for productization workflows. Mount `/workspace` to keep work across container runs. See [running nous](docs/running.md) for mounts and credentials.
+
+### OpenShell
+
+OpenShell adds an enforced egress policy. Install OpenShell and clone this repository. Then start the sandbox with the helper script:
+
+```bash
+./scripts/nous-openshell.sh
+./scripts/nous-openshell.sh --productization
+```
+
+The script sets the provider, the policy for your gateway, the sandbox, and the workspace. See [OpenShell](docs/openshell.md) for the options and the limits.
 
 ## Documentation
 
@@ -47,7 +60,8 @@ Replace the image name with `ghcr.io/adrianriobo/nous-productization:latest` for
 |---|---|
 | Models, routing, and built-in tools | [Architecture](docs/architecture.md) |
 | Image contents, tags, and builds | [Images](docs/images.md) |
-| Podman, credentials, and OpenShell | [Running](docs/running.md) |
+| Podman, credentials, and session settings | [Running](docs/running.md) |
+| OpenShell sandbox, policy, and workspace | [OpenShell](docs/openshell.md) |
 | Wiki search and source ingestion | [Wiki](docs/wiki.md) |
 | Journal records and resume | [Journal](docs/journal.md) |
 | MCP configuration and tool discovery | [MCP servers](docs/mcp.md) |

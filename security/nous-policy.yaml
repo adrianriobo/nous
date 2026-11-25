@@ -8,10 +8,16 @@ version: 1
 # Web search (DuckDuckGo) is intentionally excluded — see nous-policy-websearch.yaml.
 #
 # Apply at sandbox creation:
+#   ./scripts/nous-openshell.sh
+# or:
 #   openshell sandbox create \
 #     --from ghcr.io/adrianriobo/nous:latest \
 #     --provider enmaas-nous \
-#     --policy ./security/nous-policy.yaml
+#     --policy ./security/nous-policy.yaml \
+#     -- /usr/local/bin/entrypoint.sh
+#
+# The helper script writes a copy of this file with the gateway host from
+# ENMAAS_BASE_URL. See docs/openshell.md.
 #
 # Update a running sandbox:
 #   openshell policy update my-sandbox --policy ./security/nous-policy.yaml
@@ -33,9 +39,9 @@ network_policies:
 
   # ── EnMaaS inference + model discovery ────────────────────────────────────
   # The gateway serves chat completions and the /v1/models list used by the
-  # router at boot. The gateway host is internal and ships as a placeholder:
-  # replace enmaas-gateway.example.com with the host from your ENMAAS_BASE_URL
-  # before applying this policy.
+  # router at boot. The gateway host is internal and ships as a placeholder.
+  # Set the host from ENMAAS_BASE_URL before you apply this policy. The helper
+  # script scripts/nous-openshell.sh does this step for the default policy.
   enmaas:
     endpoints:
       - host: enmaas-gateway.example.com

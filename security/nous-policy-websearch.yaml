@@ -8,10 +8,16 @@ version: 1
 # internal or confidential source code.
 #
 # Apply:
+#   ./scripts/nous-openshell.sh --policy /path/to/this-file
+# or:
 #   openshell sandbox create \
 #     --from ghcr.io/adrianriobo/nous:latest \
 #     --provider enmaas-nous \
-#     --policy ./security/nous-policy-websearch.yaml
+#     --policy ./security/nous-policy-websearch.yaml \
+#     -- /usr/local/bin/entrypoint.sh
+#
+# Set the gateway host in this file before you apply it.
+# See docs/openshell.md.
 
 # Pi reads its runtime from /opt/pi (base image install). Landlock blocks
 # access to paths not listed here or in the automatic baseline (/usr, /lib,

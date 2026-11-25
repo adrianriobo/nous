@@ -7,7 +7,7 @@ The build job creates both image targets. It runs container structure tests and 
 | Check | Purpose |
 |---|---|
 | Build | Build both images and check the base image structure. |
-| Policy Validation | Validate the default and web-search OpenShell policies. |
+| Policy Validation | Validate the OpenShell policies and the helper script. |
 | Functional — Smoke Test | Run pi in the base image against a mock EnMaaS server. |
 | Subagents — Model and Safety Tests | Test subagent roles and limits in the base image. |
 | Router — Model Selection Tests | Test hosted routing, paid escalation, and retries in the base image. |
