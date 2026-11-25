@@ -49,4 +49,4 @@ The image also includes [`context/APPEND_SYSTEM.md`](../context/APPEND_SYSTEM.md
 
 ## Network boundary
 
-OpenShell policies can restrict network access for the sandbox. The standard policy permits EnMaaS and GitHub. Separate examples permit DuckDuckGo or Slack. Configure additional services when needed. A Podman run alone does not apply OpenShell policies. See [running nous](running.md#nvidia-openshell).
+OpenShell policies restrict network access for the sandbox. The standard policy permits EnMaaS and GitHub. Separate examples permit DuckDuckGo or Slack. A Podman run alone does not apply a policy. Start a sandbox with `scripts/nous-openshell.sh`. See [OpenShell](openshell.md).

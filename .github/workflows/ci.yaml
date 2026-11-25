@@ -215,6 +215,18 @@ jobs:
       - name: Verify OpenShell
         run: openshell --version
 
+      - name: Check the OpenShell helper script
+        run: |
+          bash -n scripts/nous-openshell.sh
+          export ENMAAS_BASE_URL=https://enmaas.example.com/v1
+          export ENMAAS_API_KEY=test-key
+          export NOUS_STATE_DIR=/tmp/nous-openshell
+          ./scripts/nous-openshell.sh --dry-run --productization --tag test --task "echo ok" \
+            | tee /tmp/nous-openshell-dry-run.log
+          grep -q "/usr/local/bin/entrypoint.sh" /tmp/nous-openshell-dry-run.log
+          grep -q "nous-productization:test" /tmp/nous-openshell-dry-run.log
+          grep -q "host: enmaas.example.com" "${NOUS_STATE_DIR}/nous-policy.yaml"
+
       - name: Validate nous-policy.yaml
         run: |
           openshell sandbox create \

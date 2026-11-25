@@ -105,34 +105,23 @@ Mount a CA bundle for Node.js connections to internal services:
 
 The entrypoint sets `NODE_EXTRA_CA_CERTS` when the bundle exists. An explicitly set `NODE_EXTRA_CA_CERTS` takes precedence.
 
-## NVIDIA OpenShell
+## OpenShell
 
-OpenShell applies network policies to the sandbox. The supplied default policy permits EnMaaS and GitHub. The other policies permit DuckDuckGo or Slack. The policies do not apply to a plain Podman run.
+OpenShell runs the agent in a sandbox with an enforced egress policy. A plain Podman run does not apply the policy.
 
-Replace `enmaas-gateway.example.com` in the selected policy with your gateway host. Configure access to any other services that your task needs.
-
-```bash
-openshell settings set --global --key providers_v2_enabled --value true --yes
-openshell provider create \
-  --name enmaas-nous \
-  --type openai-compatible \
-  --config OPENAI_BASE_URL=<your-gateway-base-url> \
-  --config OPENAI_API_KEY=<your-api-key>
-
-openshell sandbox create \
-  --from ghcr.io/adrianriobo/nous:latest \
-  --provider enmaas-nous \
-  --policy ./security/nous-policy.yaml
-```
-
-Use [`nous-policy-websearch.yaml`](../security/nous-policy-websearch.yaml) for DuckDuckGo access. Use [`nous-policy-slack.yaml`](../security/nous-policy-slack.yaml) for Slack access. Combine the necessary rules if a task needs both. Review the policy before you use confidential data.
-
-To update a sandbox policy:
+Use the helper script. It prepares the provider, the policy for your gateway, and the sandbox:
 
 ```bash
-openshell policy update my-sandbox --policy ./security/nous-policy.yaml --dry-run
-openshell policy update my-sandbox --policy ./security/nous-policy.yaml
+export ENMAAS_BASE_URL=https://your-gateway.example.com/v1
+export ENMAAS_API_KEY=your-key
+./scripts/nous-openshell.sh
 ```
+
+OpenShell replaces the image entrypoint. The sandbox command is therefore `/usr/local/bin/entrypoint.sh`. The helper script sets this command.
+
+The sandbox workspace is `/sandbox`. The journal is `/sandbox/journal.md`. The sandbox uploads the current folder to `/sandbox`.
+
+See [OpenShell](openshell.md) for the setup, the options, the workspace upload, resume, extra network access, and troubleshooting.
 
 ## Local tests
 
