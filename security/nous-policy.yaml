@@ -20,7 +20,7 @@ version: 1
 # ENMAAS_BASE_URL. See docs/openshell.md.
 #
 # Update a running sandbox:
-#   openshell policy update my-sandbox --policy ./security/nous-policy.yaml
+#   openshell policy set my-sandbox --policy ./security/nous-policy.yaml
 #
 # Binary paths resolved inside the image:
 #   readlink -f $(command -v node)  →  /usr/bin/node-26
