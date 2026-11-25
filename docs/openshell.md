@@ -109,6 +109,9 @@ The script gives these options:
 | `--task TEXT` | Send one task to pi and exit. |
 | `--recreate` | Delete the sandbox first. This deletes its workspace. |
 | `--policy FILE` | Use your policy file. |
+| `--env-file FILE` | Forward the variables in `FILE`. See [Environment variables](#environment-variables). |
+| `--env KEY=VALUE` | Forward one variable. |
+| `--provider NAME` | Attach another provider. |
 | `--dry-run` | Print the commands. Change no OpenShell state. |
 
 The script uses the OpenShell workspace from `OPENSHELL_WORKSPACE`. The default is `default`.
