@@ -101,7 +101,7 @@ The script gives these options:
 | Option | Effect |
 |---|---|
 | `--productization` | Use `ghcr.io/adrianriobo/nous-productization`. |
-| `--image REPO` | Select the image repository without a tag. Use it for a local registry. Default: `ghcr.io/adrianriobo/nous`. |
+| `--image REPO` | Select the image repository without a tag. Use it for a local registry. This option replaces `--productization`. Default: `ghcr.io/adrianriobo/nous`. |
 | `--tag TAG` | Select the image tag. Default: `latest`. |
 | `--name NAME` | Select the sandbox name. Default: the image variant. |
 | `--workspace DIR` | Upload `DIR`. Default: the current folder. |
