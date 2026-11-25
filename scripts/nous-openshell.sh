@@ -309,6 +309,12 @@ resolve_image() {
     fi
 }
 
+profile_resource_version() {
+    openshell profile export "${PROFILE_ID}" -o yaml 2>/dev/null \
+        | sed -n 's/^resource_version: *\([0-9][0-9]*\)$/\1/p' \
+        | head -1
+}
+
 sandbox_exists() {
     [ "${DRY_RUN}" -eq 0 ] || return 1
     openshell sandbox get "${SANDBOX_NAME}" >/dev/null 2>&1
@@ -318,7 +324,13 @@ setup_provider() {
     info "Prepare the provider profile in ${PROFILE_FILE}."
     if [ "${DRY_RUN}" -eq 0 ] && openshell profile describe "${PROFILE_ID}" >/dev/null 2>&1; then
         info "Update the provider profile ${PROFILE_ID}."
-        # Lint fails on an existing profile. The update validates the file.
+        # Lint fails on an existing profile. The update validates the file and
+        # needs the current resource version.
+        local resource_version
+        resource_version="$(profile_resource_version)"
+        if [ -n "${resource_version}" ]; then
+            printf 'resource_version: %s\n' "${resource_version}" >> "${PROFILE_FILE}"
+        fi
         run openshell profile update "${PROFILE_ID}" -f "${PROFILE_FILE}"
     else
         run openshell profile lint -f "${PROFILE_FILE}"

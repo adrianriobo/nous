@@ -140,6 +140,9 @@ openshell profile lint -f "$STATE/enmaas-profile.yaml"
 openshell profile import -f "$STATE/enmaas-profile.yaml"
 
 # Profile from an earlier run: lint fails, so update it instead.
+# An update needs the current resource version.
+VERSION=$(openshell profile export enmaas -o yaml | sed -n 's/^resource_version: //p')
+printf 'resource_version: %s\n' "$VERSION" >> "$STATE/enmaas-profile.yaml"
 openshell profile update enmaas -f "$STATE/enmaas-profile.yaml"
 
 openshell provider create \
