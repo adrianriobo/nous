@@ -755,6 +755,7 @@ jobs:
         run: |
           mkdir -p /tmp/nous-helper-ws
           echo "upload-ok" > /tmp/nous-helper-ws/marker.txt
+          printf 'NOUS_TITLE=nous | helper test\nWIKI_PATH=/sandbox/wiki\n' > /tmp/nous-helper.env
           export ENMAAS_BASE_URL=http://host.openshell.internal:4010/v1
           export ENMAAS_API_KEY=test-key
           export NOUS_STATE_DIR=/tmp/nous-state
@@ -763,6 +764,7 @@ jobs:
             --tag test \
             --name nous-helper \
             --workspace /tmp/nous-helper-ws \
+            --env-file /tmp/nous-helper.env \
             --task "say hello" | tee /tmp/helper-run.log
           grep -qi "hello" /tmp/helper-run.log \
             || { echo "FAIL: pi did not answer through the sandbox"; exit 1; }
@@ -776,6 +778,21 @@ jobs:
             | grep -q "upload-ok" \
             || { echo "FAIL: the workspace upload did not reach /sandbox"; exit 1; }
           echo "PASS: the workspace upload reached /sandbox"
+
+      - name: "Test: the env file reached the sandbox and kept the key in the provider"
+        run: |
+          openshell sandbox exec nous-helper -- printenv NOUS_TITLE \
+            | grep -q "helper test" \
+            || { echo "FAIL: NOUS_TITLE did not reach the sandbox"; exit 1; }
+          openshell sandbox exec nous-helper -- printenv WIKI_PATH \
+            | grep -q "/sandbox/wiki" \
+            || { echo "FAIL: WIKI_PATH did not reach the sandbox"; exit 1; }
+          KEY=$(openshell sandbox exec nous-helper -- printenv ENMAAS_API_KEY || true)
+          if [ "${KEY}" = "test-key" ]; then
+            echo "FAIL: the sandbox holds the real API key"
+            exit 1
+          fi
+          echo "PASS: the env file reached the sandbox and the key stayed in the provider"
 
       - name: "Test: a second run uses the existing sandbox"
         env:
