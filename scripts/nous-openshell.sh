@@ -334,8 +334,16 @@ setup_provider() {
     fi
 }
 
+# Labels accept only letters, digits, dot, dash, and underscore.
+label_value() {
+    printf '%s' "$1" | sed 's/[^a-zA-Z0-9._-]/_/g' | cut -c1-63
+}
+
 create_sandbox() {
+    local label_variant label_image
     CREATED=1
+    label_variant="$(label_value "${VARIANT}")"
+    label_image="$(label_value "${IMAGE}")"
     info "Create the sandbox ${SANDBOX_NAME} from ${IMAGE}."
     run openshell sandbox create \
         --name "${SANDBOX_NAME}" \
@@ -345,8 +353,8 @@ create_sandbox() {
         --env-from ENMAAS_BASE_URL \
         --tty \
         --detach \
-        --label "nous.variant=${VARIANT}" \
-        --label "nous.image=${IMAGE}" \
+        --label "nous.variant=${label_variant}" \
+        --label "nous.image=${label_image}" \
         -- "${ENTRYPOINT}"
     wait_ready
     if [ "${UPLOAD}" -eq 1 ]; then
