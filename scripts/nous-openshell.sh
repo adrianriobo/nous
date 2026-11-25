@@ -316,10 +316,12 @@ sandbox_exists() {
 
 setup_provider() {
     info "Prepare the provider profile in ${PROFILE_FILE}."
-    run openshell profile lint -f "${PROFILE_FILE}"
     if [ "${DRY_RUN}" -eq 0 ] && openshell profile describe "${PROFILE_ID}" >/dev/null 2>&1; then
+        info "Update the provider profile ${PROFILE_ID}."
+        # Lint fails on an existing profile. The update validates the file.
         run openshell profile update "${PROFILE_ID}" -f "${PROFILE_FILE}"
     else
+        run openshell profile lint -f "${PROFILE_FILE}"
         run openshell profile import -f "${PROFILE_FILE}"
     fi
     if [ "${DRY_RUN}" -eq 0 ] && openshell provider get "${PROVIDER_NAME}" >/dev/null 2>&1; then

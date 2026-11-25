@@ -139,6 +139,9 @@ STATE="${XDG_STATE_HOME:-$HOME/.local/state}/nous-openshell"
 openshell profile lint -f "$STATE/enmaas-profile.yaml"
 openshell profile import -f "$STATE/enmaas-profile.yaml"
 
+# Profile from an earlier run: lint fails, so update it instead.
+openshell profile update enmaas -f "$STATE/enmaas-profile.yaml"
+
 openshell provider create \
   --name enmaas-nous \
   --type enmaas \
