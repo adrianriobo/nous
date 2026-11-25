@@ -687,6 +687,126 @@ jobs:
           fi
           echo "PASS: DuckDuckGo blocked — base policy excludes it"
 
+  # ── OpenShell helper script ────────────────────────────────────────────────
+  # Runs scripts/nous-openshell.sh against a local registry and a mock EnMaaS
+  # server. It checks the provider, the generated policy, the sandbox command,
+  # the workspace upload, and a second run on an existing sandbox.
+  openshell-helper:
+    name: OpenShell — Helper Script
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: nous-image
+          path: /tmp
+
+      - name: Load image
+        run: podman load -i /tmp/nous-test.tar
+
+      - name: Start local OCI registry
+        run: |
+          podman run -d --name local-registry \
+            -p 5000:5000 \
+            docker.io/library/registry:2
+          sleep 2
+
+      - name: Push image to local registry
+        run: |
+          podman tag nous:test localhost:5000/nous:test
+          podman push --tls-verify=false localhost:5000/nous:test
+
+      - name: Cache OpenShell
+        id: openshell-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.local/bin/openshell
+          key: openshell-linux-amd64-${{ env.OPENSHELL_VERSION }}
+
+      - name: Install OpenShell
+        if: steps.openshell-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
+          sleep 3
+
+      - name: Add OpenShell to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify OpenShell
+        run: openshell --version
+
+      - name: Start mock EnMaaS server
+        run: |
+          node tests/mock-enmaas-server.mjs &
+          echo "MOCK_PID=$!" >> "$GITHUB_ENV"
+          for i in $(seq 1 10); do
+            nc -z 127.0.0.1 4010 2>/dev/null && break
+            sleep 1
+          done
+          echo "Mock server ready"
+
+      - name: "Test: create the sandbox and run one task"
+        run: |
+          mkdir -p /tmp/nous-helper-ws
+          echo "upload-ok" > /tmp/nous-helper-ws/marker.txt
+          export ENMAAS_BASE_URL=http://host.openshell.internal:4010/v1
+          export ENMAAS_API_KEY=test-key
+          export NOUS_STATE_DIR=/tmp/nous-state
+          ./scripts/nous-openshell.sh \
+            --image localhost:5000/nous \
+            --tag test \
+            --name nous-helper \
+            --workspace /tmp/nous-helper-ws \
+            --task "say hello" | tee /tmp/helper-run.log
+          grep -qi "hello" /tmp/helper-run.log \
+            || { echo "FAIL: pi did not answer through the sandbox"; exit 1; }
+          grep -q "host: host.openshell.internal" /tmp/nous-state/nous-policy.yaml \
+            || { echo "FAIL: the policy does not name the gateway host"; exit 1; }
+          echo "PASS: the helper script created the sandbox and pi answered"
+
+      - name: "Test: the workspace upload reached /sandbox"
+        run: |
+          openshell sandbox exec nous-helper -- cat /sandbox/marker.txt \
+            | grep -q "upload-ok" \
+            || { echo "FAIL: the workspace upload did not reach /sandbox"; exit 1; }
+          echo "PASS: the workspace upload reached /sandbox"
+
+      - name: "Test: a second run uses the existing sandbox"
+        env:
+          ENMAAS_BASE_URL: http://host.openshell.internal:4010/v1
+          ENMAAS_API_KEY: test-key
+          NOUS_STATE_DIR: /tmp/nous-state
+        run: |
+          ./scripts/nous-openshell.sh \
+            --image localhost:5000/nous \
+            --tag test \
+            --name nous-helper \
+            --no-upload \
+            --task "say hello" | tee /tmp/helper-rerun.log
+          grep -qi "hello" /tmp/helper-rerun.log \
+            || { echo "FAIL: the second run did not answer"; exit 1; }
+          echo "PASS: the second run reused the sandbox"
+
+      - name: Show the generated files
+        if: always()
+        run: |
+          cat /tmp/nous-state/enmaas-profile.yaml || true
+          cat /tmp/nous-state/nous-policy.yaml || true
+
+      - name: Delete the sandbox
+        if: always()
+        run: openshell sandbox delete nous-helper || true
+
+      - name: Stop mock server
+        if: always()
+        run: kill "$MOCK_PID" 2>/dev/null || true
+
   # ── Wiki integration test ──────────────────────────────────────────────────
   # Mounts the fixture wiki and verifies:
   #   1. wiki tools are registered at boot (log line present)

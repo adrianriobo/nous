@@ -17,9 +17,24 @@ The build job creates both image targets. It runs container structure tests and 
 | MCP — Tool Discovery | Test MCP discovery with mock servers. |
 | Skills — Productization Image | Check productization skills, base utilities, and selected tools. |
 | OpenShell Egress Enforcement | Test allowed and blocked network access. |
+| OpenShell — Helper Script | Run `scripts/nous-openshell.sh` against a local registry and a mock EnMaaS server. |
 | Wiki — OKF 2.0 Integration | Test wiki search and ingestion. |
 
 CI publishes both images on pushes to `main` and version tags. It also publishes PR-specific tags for pull requests from this repository. Fork pull requests do not push images. See [images](images.md#tags).
+
+## OpenShell helper script test
+
+The `openshell-helper` job runs the helper script against a local registry. It runs these steps:
+
+1. Push the test image to `localhost:5000/nous:test`.
+2. Start the mock EnMaaS server on the runner host.
+3. Set `ENMAAS_BASE_URL` to `http://host.openshell.internal:4010/v1`.
+4. Run the script with `--image`, `--tag`, `--workspace`, and `--task`.
+5. Check the answer, the generated policy, and the upload in `/sandbox`.
+6. Run the script again. It must start the existing sandbox.
+7. Delete the sandbox.
+
+The job uses a local OpenShell gateway. It does not connect to a cluster.
 
 ## Mock EnMaaS server
 
