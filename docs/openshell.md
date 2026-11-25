@@ -129,6 +129,55 @@ The provider gives pi a placeholder for the key. OpenShell replaces the placehol
 
 The profile limits the key to the Node.js binary `/usr/bin/node-26`. Change this path when the base image changes it.
 
+## Environment variables
+
+The script forwards `ENMAAS_BASE_URL` only. It does not forward your other shell variables. Use `--env-file` or `--env` for the variables that the session needs:
+
+```bash
+./scripts/nous-openshell.sh --env-file .env
+./scripts/nous-openshell.sh --env NOUS_TITLE="nous | migration" --env NOUS_PAID_ESCALATION=off
+```
+
+This is the same set of variables that you pass to `podman run --env-file`. Repeat `--env-file` and `--env` to add more. An `--env` value wins over an env file value.
+
+The script reads each value and forwards the name with `--env-from`. The value does not appear in the process arguments.
+
+| Variable | Purpose |
+|---|---|
+| `NOUS_TITLE` | Set the terminal title. |
+| `NOUS_PAID_ESCALATION=off` | Stop automatic escalation to paid models. |
+| `NOUS_JOURNAL` | Set the journal path. Default: the first writable path from `/sandbox/journal.md`. |
+| `WIKI_PATH` | Set the wiki path. Default: `/sandbox/wiki`. |
+| `NODE_EXTRA_CA_CERTS` | Set a CA bundle for TLS. |
+| `SLACK_XOXC_TOKEN`, `SLACK_XOXD_TOKEN`, `SLACK_WORKSPACE` | Let the Slack reader use the Slack API. |
+| `GITHUB_TOKEN` or `GH_TOKEN` | Let `gh` and `git` use the GitHub API. |
+| `PI_NOUS_SUBAGENT_ROLE` | Set by the subagent runner. Do not set it. |
+
+`ENMAAS_BASE_URL` and `ENMAAS_API_KEY` come from the shell and the provider. The script skips them in an env file. The provider sends a placeholder for the key.
+
+The env file accepts one `KEY=VALUE` pair per line. A leading `export` is optional. The script removes one pair of quotes around a value. It does not expand `$VAR` or run commands.
+
+The file can also set `ENMAAS_BASE_URL` and `ENMAAS_API_KEY`. You can then run the script with `--env-file .env` only.
+
+The wiki is not a mount. Upload it into the sandbox:
+
+```bash
+openshell sandbox upload nous /path/to/wiki /sandbox/wiki
+```
+
+### Secrets
+
+A provider is better than an env file for a secret. The sandbox holds a placeholder, and OpenShell replaces it only for the provider endpoints. The OpenShell catalog includes profiles for `github`, `aws`, `pypi`, and other services. Import a profile and attach it:
+
+```bash
+openshell profile import -f github.yaml
+./scripts/nous-openshell.sh --provider github
+```
+
+The script attaches `enmaas-nous` and each provider from `--provider`.
+
+A variable alone does not grant network access. The sandbox policy must also allow the host and the binary. A provider profile carries its own endpoints. For other hosts, add the endpoint to the policy. See [Extra network access](#extra-network-access).
+
 ## Manual setup
 
 The script runs these commands. Run them yourself when you must control each step.

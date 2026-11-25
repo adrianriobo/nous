@@ -52,7 +52,7 @@ OpenShell adds an enforced egress policy. Install OpenShell and clone this repos
 ./scripts/nous-openshell.sh --productization
 ```
 
-The script sets the provider, the policy for your gateway, the sandbox, and the workspace. See [OpenShell](docs/openshell.md) for the options and the limits.
+The script sets the provider, the policy for your gateway, the sandbox, and the workspace. Pass the same variables that you pass to Podman with `--env-file .env`. See [OpenShell](docs/openshell.md) for the options and the limits.
 
 ## Documentation
 

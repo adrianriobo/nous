@@ -31,6 +31,10 @@ RECREATE=0
 DRY_RUN=0
 CREATED=0
 CUSTOM_POLICY=""
+ENV_FILES=()
+EXTRA_ENVS=()
+EXTRA_PROVIDERS=()
+SANDBOX_ENV_KEYS=()
 
 usage() {
     cat <<'EOF'
@@ -49,6 +53,9 @@ Options:
   --task TEXT          Send one task to pi and exit.
   --recreate           Delete the sandbox first. This deletes its workspace.
   --policy FILE        Use FILE instead of the generated policy.
+  --env-file FILE      Forward the variables in FILE. Repeatable.
+  --env KEY=VALUE      Forward one variable. Repeatable.
+  --provider NAME      Attach another provider. Repeatable.
   --dry-run            Print the commands. Change no OpenShell state.
   -h, --help           Show this help.
 
@@ -56,6 +63,9 @@ Environment:
   ENMAAS_BASE_URL      Required. EnMaaS gateway base URL.
   ENMAAS_API_KEY       Required. EnMaaS gateway key.
   NOUS_STATE_DIR       Optional. Folder for the generated files.
+
+  The script does not forward other shell variables. Use --env-file or --env.
+  Use a provider for a secret. A provider keeps the value out of the sandbox.
 
 Examples:
   export ENMAAS_BASE_URL=https://gateway.example.com/v1
@@ -139,6 +149,25 @@ parse_args() {
                 CUSTOM_POLICY="$2"
                 shift
                 ;;
+            --env-file)
+                need "--env-file" "${2:-}"
+                ENV_FILES+=("$2")
+                shift
+                ;;
+            --env)
+                need "--env" "${2:-}"
+                case "$2" in
+                    *=*) ;;
+                    *) die "--env needs KEY=VALUE." ;;
+                esac
+                EXTRA_ENVS+=("$2")
+                shift
+                ;;
+            --provider)
+                need "--provider" "${2:-}"
+                EXTRA_PROVIDERS+=("$2")
+                shift
+                ;;
             --dry-run)
                 DRY_RUN=1
                 ;;
@@ -151,6 +180,68 @@ parse_args() {
                 ;;
         esac
         shift
+    done
+}
+
+# Add a variable name to the list that the sandbox receives.
+add_env_key() {
+    local key i
+    key="$1"
+    case "${key}" in
+        # The script sets the base URL. The provider holds the API key.
+        ENMAAS_BASE_URL|ENMAAS_API_KEY) return 0 ;;
+    esac
+    if [ "${#SANDBOX_ENV_KEYS[@]}" -gt 0 ]; then
+        for i in "${SANDBOX_ENV_KEYS[@]}"; do
+            [ "${i}" = "${key}" ] && return 0
+        done
+    fi
+    SANDBOX_ENV_KEYS+=("${key}")
+}
+
+# Read a .env file. Export each value and add its name to the forward list.
+load_env_file() {
+    local file line key value
+    file="$1"
+    [ -f "${file}" ] || die "Cannot find the env file: ${file}"
+    while IFS= read -r line || [ -n "${line}" ]; do
+        line="${line%$'\r'}"
+        case "${line}" in
+            ''|\#*) continue ;;
+        esac
+        line="${line#export }"
+        case "${line}" in
+            *=*) ;;
+            *) die "The env file ${file} has a line without '=': ${line}" ;;
+        esac
+        key="${line%%=*}"
+        value="${line#*=}"
+        case "${key}" in
+            ''|*[!A-Za-z0-9_]*) die "The env file ${file} has an invalid key: ${key}" ;;
+        esac
+        case "${value}" in
+            \"*\") value="${value#\"}"; value="${value%\"}" ;;
+            \'*\') value="${value#\'}"; value="${value%\'}" ;;
+        esac
+        export "${key}=${value}"
+        add_env_key "${key}"
+    done < "${file}"
+}
+
+# Export the --env values. An --env value wins over an env file value.
+apply_extra_envs() {
+    local pair key value
+    if [ "${#EXTRA_ENVS[@]}" -eq 0 ]; then
+        return 0
+    fi
+    for pair in "${EXTRA_ENVS[@]}"; do
+        key="${pair%%=*}"
+        value="${pair#*=}"
+        case "${key}" in
+            ''|*[!A-Za-z0-9_]*) die "--env has an invalid key: ${key}" ;;
+        esac
+        export "${key}=${value}"
+        add_env_key "${key}"
     done
 }
 
@@ -358,18 +449,33 @@ create_sandbox() {
     CREATED=1
     label_variant="$(label_value "${VARIANT}")"
     label_image="$(label_value "${IMAGE}")"
+    local -a args
+    local provider key
     info "Create the sandbox ${SANDBOX_NAME} from ${IMAGE}."
-    run openshell sandbox create \
-        --name "${SANDBOX_NAME}" \
-        --from "${IMAGE}" \
-        --provider "${PROVIDER_NAME}" \
-        --policy "${GENERATED_POLICY}" \
-        --env-from ENMAAS_BASE_URL \
-        --tty \
-        --detach \
-        --label "nous.variant=${label_variant}" \
-        --label "nous.image=${label_image}" \
-        -- "${ENTRYPOINT}"
+    args=(
+        sandbox create
+        --name "${SANDBOX_NAME}"
+        --from "${IMAGE}"
+        --provider "${PROVIDER_NAME}"
+        --policy "${GENERATED_POLICY}"
+        --env-from ENMAAS_BASE_URL
+    )
+    if [ "${#EXTRA_PROVIDERS[@]}" -gt 0 ]; then
+        for provider in "${EXTRA_PROVIDERS[@]}"; do
+            args+=(--provider "${provider}")
+        done
+    fi
+    if [ "${#SANDBOX_ENV_KEYS[@]}" -gt 0 ]; then
+        # --env-from keeps the value out of the process arguments.
+        for key in "${SANDBOX_ENV_KEYS[@]}"; do
+            args+=(--env-from "${key}")
+        done
+    fi
+    args+=(--tty --detach)
+    args+=(--label "nous.variant=${label_variant}")
+    args+=(--label "nous.image=${label_image}")
+    args+=(-- "${ENTRYPOINT}")
+    run openshell "${args[@]}"
     wait_ready
     if [ "${UPLOAD}" -eq 1 ]; then
         info "Upload the contents of ${WORKSPACE} to /sandbox."
@@ -433,6 +539,13 @@ attach_sandbox() {
 
 main() {
     parse_args "$@"
+    local file
+    if [ "${#ENV_FILES[@]}" -gt 0 ]; then
+        for file in "${ENV_FILES[@]}"; do
+            load_env_file "${file}"
+        done
+    fi
+    apply_extra_envs
     check_requirements
     check_openshell_version
     parse_gateway
