@@ -2,6 +2,11 @@
 # renovate: datasource=docker depName=quay.io/aipcc/base-images/agentic/pi
 ARG BASE_TAG=1.4.0
 ARG BASE_IMAGE=quay.io/aipcc/base-images/agentic/pi:${BASE_TAG}
+# OpenClaw Enterprise runtime family. A release build passes a digest:
+#   --build-arg OCE_BASE_IMAGE=quay.io/aipcc/base-images/agentic/oce-runtime@sha256:<digest>
+# renovate: datasource=docker depName=quay.io/aipcc/base-images/agentic/oce-runtime
+ARG OCE_BASE_TAG=latest
+ARG OCE_BASE_IMAGE=quay.io/aipcc/base-images/agentic/oce-runtime:${OCE_BASE_TAG}
 # renovate: datasource=github-releases depName=opendatahub-io/productization-skills
 ARG SKILLS_REF=v0.9.1
 # renovate: datasource=github-releases depName=rtk-ai/rtk
@@ -93,6 +98,59 @@ COPY --chown=1001:0 context/APPEND_SYSTEM.md /sandbox/.pi/agent/APPEND_SYSTEM.md
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD []
+
+# ── nous-oce: nous on the OpenClaw Enterprise runtime ────────────────────────
+# Build with: podman build --target nous-oce -t nous-oce .
+#
+# OCE ignores the image entrypoint. It runs /usr/bin/tini plus a generated
+# Node.js program, so the base layout must stay intact: /app, /home/node,
+# /usr/bin/tini, /usr/local/bin/node and /usr/local/bin/gh. The workspace setup
+# program also runs from this image.
+#
+# OCE runs agent Pods as node (1000:1000) with runAsNonRoot. The base image
+# already provides that identity and owns /home/node.
+#
+# The Agent Configuration supplies the model provider, the skills path and the
+# MCP servers. This target adds the nous runtime surface only.
+FROM ${OCE_BASE_IMAGE} AS nous-oce
+
+USER 0
+
+ARG VERSION=0.1.0
+ARG NAME=nous-oce
+ARG SUMMARY="nous agent runtime on OpenClaw Enterprise"
+
+LABEL name="${NAME}" \
+      com.redhat.component="${NAME}-container" \
+      summary="${SUMMARY}" \
+      description="${SUMMARY}" \
+      io.k8s.display-name="${SUMMARY}" \
+      io.k8s.description="${SUMMARY}" \
+      io.nous.base-image="${OCE_BASE_IMAGE}" \
+      io.nous.version="${VERSION}" \
+      io.openshell.harness.version="${VERSION}" \
+      io.openshift.tags="hummingbird openclaw nous ${NAME}" \
+      distribution-scope="authoritative-source-only"
+
+# Fail the build when the base loses a path that OCE depends on.
+RUN test -x /usr/bin/tini \
+    && test -x /usr/local/bin/node \
+    && test -x /usr/local/bin/gh \
+    && test -f /app/openclaw.mjs \
+    && test -d /home/node
+
+COPY context/oce/gateway.sh /usr/local/bin/nous-gateway
+RUN chmod 0755 /usr/local/bin/nous-gateway \
+    && bash -n /usr/local/bin/nous-gateway
+
+USER node
+WORKDIR /app
+ENV HOME=/home/node
+ENV AGENT_NAME=openclaw
+ENV OPENCLAW_GATEWAY_PORT=8080
+
+ENTRYPOINT ["/usr/bin/tini", "-s", "-e", "143", "--"]
+CMD ["/usr/local/bin/nous-gateway"]
 
 # ── nous-productization: nous + productization-skills ─────────────────────────
 # Build with: podman build --target nous-productization -t nous:productization .
