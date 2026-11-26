@@ -2,6 +2,16 @@
 
 The `subagent` tool adds separate model sessions to the existing router. It does not change the main session model.
 
+## Delegation flow
+
+<p align="center">
+  <img src="../assets/diagrams/subagent-flow.svg" alt="Diagram: six delegation steps, from the main session request through the role check, the optional paid gate, the child process, its fixed model and tools, to verification in the main session." width="100%"/>
+</p>
+
+The tool starts a paid child only after confirmation. The child receives the task, not the full parent conversation. The child has no nested subagent tool. See [security limits](#security-limits).
+
+## Roles
+
 Ask for a subagent explicitly. For example:
 
 > Use the scout subagent to find the authentication code.

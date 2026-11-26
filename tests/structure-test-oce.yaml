@@ -1,0 +1,68 @@
+# Container structure tests for the nous-oce image.
+# Run with: container-structure-test test --image <image> --config tests/structure-test-oce.yaml
+
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "node"
+  workdir: "/app"
+  envVars:
+    - key: "AGENT_NAME"
+      value: "openclaw"
+    - key: "HOME"
+      value: "/home/node"
+    - key: "OPENCLAW_GATEWAY_PORT"
+      value: "8080"
+  labels:
+    - key: "name"
+      value: "nous-oce"
+    - key: "io.openshell.sandbox.harness"
+      value: "oce-runtime"
+  entrypoint: ["/usr/bin/tini", "-s", "-e", "143", "--"]
+  cmd: ["/usr/local/bin/nous-gateway"]
+
+fileExistenceTests:
+  - name: "gateway helper"
+    path: "/usr/local/bin/nous-gateway"
+    shouldExist: true
+    permissions: "-rwxr-xr-x"
+
+  - name: "tini"
+    path: "/usr/bin/tini"
+    shouldExist: true
+
+  - name: "node"
+    path: "/usr/local/bin/node"
+    shouldExist: true
+
+  - name: "gh"
+    path: "/usr/local/bin/gh"
+    shouldExist: true
+
+  - name: "openclaw entry point"
+    path: "/app/openclaw.mjs"
+    shouldExist: true
+
+  - name: "node home"
+    path: "/home/node"
+    shouldExist: true
+
+  - name: "no pi sandbox directory"
+    path: "/sandbox"
+    shouldExist: false
+
+commandTests:
+  - name: "runs as UID 1000"
+    command: "id"
+    args: ["-u"]
+    expectedOutput: ["1000"]
+
+  - name: "gateway helper passes a shell syntax check"
+    command: "bash"
+    args: ["-n", "/usr/local/bin/nous-gateway"]
+    exitCode: 0
+
+  - name: "node is the runtime version the base pins"
+    command: "node"
+    args: ["--version"]
+    expectedOutput: ["^v24\\."]

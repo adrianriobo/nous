@@ -8,6 +8,14 @@
 
 nous combines model routing, research tools, and container images for engineering work.
 
+## How nous works
+
+<p align="center">
+  <img src="assets/diagrams/system-overview.svg" alt="Diagram: the main session routes model calls through the EnMaaS gateway, uses built-in tools, and delegates explicit tasks to read-only subagents." width="100%"/>
+</p>
+
+The advanced reviewer requires confirmation before each paid invocation. The main session must verify subagent findings. Child processes share the parent's filesystem and network policy. See [architecture](docs/architecture.md) and [subagents](docs/subagents.md).
+
 ## Smart features
 
 - **Model routing:** `router/auto` starts on a hosted EnMaaS model. It escalates to a paid model for very complex requests and after hosted retries fail. Set `NOUS_PAID_ESCALATION=off` to block this escalation. See [routing and costs](docs/architecture.md#model-routing).

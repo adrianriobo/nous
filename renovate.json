@@ -37,6 +37,12 @@
       "matchPackageNames": ["quay.io/aipcc/base-images/agentic/pi"],
       "versioning": "loose",
       "ignoreUnstable": false
+    },
+    {
+      "description": "OCE runtime base image uses commit and latest tags — follow the tag",
+      "matchPackageNames": ["quay.io/aipcc/base-images/agentic/oce-runtime"],
+      "versioning": "loose",
+      "ignoreUnstable": false
     }
   ]
 }

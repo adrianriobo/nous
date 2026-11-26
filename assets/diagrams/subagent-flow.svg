@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="430" viewBox="0 0 900 430" role="img" aria-labelledby="title desc">
+  <title id="title">nous subagent delegation flow</title>
+  <desc id="desc">Six steps. The main session calls the subagent tool for an explicit request. The tool checks the role, model, limits, and tool list. A paid role needs user confirmation. The child process gets the task only and uses a fixed model through the EnMaaS gateway. The child reads its sources with read-only tools. The main session verifies the findings before it answers the user.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4a5568"/>
+    </marker>
+    <style>
+      .box { fill: #ffffff; stroke: #4a5568; stroke-width: 1.5; }
+      .paid { fill: #fffaf0; stroke: #b7791f; stroke-width: 1.5; }
+      .badge { fill: #4a5568; }
+      .badgePaid { fill: #b7791f; }
+      .step { font-family: "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #1a202c; }
+      .body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; font-size: 12px; fill: #2d3748; }
+      .num { font-family: "Segoe UI", Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; fill: #ffffff; }
+      .edge { stroke: #4a5568; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+      .note { font-family: "Segoe UI", Helvetica, Arial, sans-serif; font-size: 11px; fill: #4a5568; }
+    </style>
+  </defs>
+
+  <rect class="box" x="30" y="70" width="220" height="96" rx="8"/>
+  <circle class="badge" cx="52" cy="92" r="11"/>
+  <text class="num" x="52" y="96" text-anchor="middle">1</text>
+  <text class="step" x="72" y="96">User request</text>
+  <text class="body" x="46" y="122">Main session calls the</text>
+  <text class="body" x="46" y="140">subagent tool for an</text>
+  <text class="body" x="46" y="158">explicit task.</text>
+
+  <rect class="box" x="310" y="70" width="220" height="96" rx="8"/>
+  <circle class="badge" cx="332" cy="92" r="11"/>
+  <text class="num" x="332" y="96" text-anchor="middle">2</text>
+  <text class="step" x="352" y="96">Role check</text>
+  <text class="body" x="326" y="122">Tool checks the role,</text>
+  <text class="body" x="326" y="140">model, limits, and the</text>
+  <text class="body" x="326" y="158">allowed tool list.</text>
+
+  <rect class="paid" x="590" y="70" width="220" height="96" rx="8"/>
+  <circle class="badgePaid" cx="612" cy="92" r="11"/>
+  <text class="num" x="612" y="96" text-anchor="middle">3</text>
+  <text class="step" x="632" y="96">Paid role gate</text>
+  <text class="body" x="606" y="122">The advanced reviewer</text>
+  <text class="body" x="606" y="140">waits for user consent.</text>
+  <text class="body" x="606" y="158">A refusal stops the call.</text>
+
+  <rect class="box" x="590" y="250" width="220" height="96" rx="8"/>
+  <circle class="badge" cx="612" cy="272" r="11"/>
+  <text class="num" x="612" y="276" text-anchor="middle">4</text>
+  <text class="step" x="632" y="276">Child process</text>
+  <text class="body" x="606" y="302">New pi process. The child</text>
+  <text class="body" x="606" y="320">gets the task only, with no</text>
+  <text class="body" x="606" y="338">parent history.</text>
+
+  <rect class="box" x="310" y="250" width="220" height="96" rx="8"/>
+  <circle class="badge" cx="332" cy="272" r="11"/>
+  <text class="num" x="332" y="276" text-anchor="middle">5</text>
+  <text class="step" x="352" y="276">Fixed model and tools</text>
+  <text class="body" x="326" y="302">The child uses its role</text>
+  <text class="body" x="326" y="320">model through EnMaaS and</text>
+  <text class="body" x="326" y="338">read-only source tools.</text>
+
+  <rect class="box" x="30" y="250" width="220" height="96" rx="8"/>
+  <circle class="badge" cx="52" cy="272" r="11"/>
+  <text class="num" x="52" y="276" text-anchor="middle">6</text>
+  <text class="step" x="72" y="276">Verify and answer</text>
+  <text class="body" x="46" y="302">The main session checks</text>
+  <text class="body" x="46" y="320">the findings against the</text>
+  <text class="body" x="46" y="338">sources, then answers.</text>
+
+  <path class="edge" d="M 250 118 L 310 118"/>
+  <path class="edge" d="M 530 118 L 590 118"/>
+  <path class="edge" d="M 700 166 L 700 250"/>
+  <path class="edge" d="M 590 298 L 530 298"/>
+  <path class="edge" d="M 310 298 L 250 298"/>
+
+  <text class="note" x="30" y="392">A child shares the parent filesystem, OS identity, and network policy. Its tool list is not a security sandbox.</text>
+  <text class="note" x="30" y="412">The main session keeps router/auto. A child never uses router/auto and cannot call the subagent tool.</text>
+</svg>

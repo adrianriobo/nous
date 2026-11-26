@@ -6,10 +6,17 @@ TAG         ?= $(VERSION)
 FULL_IMAGE  = $(REGISTRY)/$(IMAGE):$(TAG)
 LATEST      = $(REGISTRY)/$(IMAGE):latest
 
+# OCE image family. The RHOAI profile pins images by digest from this namespace.
+# Override OCE_REGISTRY to publish elsewhere.
+OCE_REGISTRY ?= quay.io/aipcc/base-images/agentic
+OCE_IMAGE   ?= nous-oce
+OCE_FULL_IMAGE = $(OCE_REGISTRY)/$(OCE_IMAGE):$(TAG)
+
 ENGINE ?= podman
 CST    ?= container-structure-test
 
-.PHONY: all build push test smoke integration lint clean help
+.PHONY: all build push test smoke integration lint clean help \
+        build-oce push-oce test-oce smoke-oce
 
 all: build test ## Build image and run structure tests
 
@@ -29,8 +36,29 @@ push: build ## Push image to registry
 	$(ENGINE) push $(FULL_IMAGE)
 	$(ENGINE) push $(LATEST)
 
+build-oce: ## Build the nous-oce image on the OpenClaw Enterprise runtime
+	$(ENGINE) build \
+		--target nous-oce \
+		--build-arg VERSION=$(VERSION) \
+		--label "org.opencontainers.image.version=$(VERSION)" \
+		--label "org.opencontainers.image.source=$(shell git remote get-url origin 2>/dev/null || echo unknown)" \
+		--label "org.opencontainers.image.revision=$(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)" \
+		-t $(OCE_FULL_IMAGE) \
+		-f Containerfile \
+		.
+	@echo "Built $(OCE_FULL_IMAGE)"
+
+push-oce: build-oce ## Push the nous-oce image
+	$(ENGINE) push $(OCE_FULL_IMAGE)
+
 test: ## Run container structure tests
 	$(CST) test --image $(FULL_IMAGE) --config tests/structure-test.yaml
+
+test-oce: ## Run the nous-oce structure tests
+	$(CST) test --image $(OCE_FULL_IMAGE) --config tests/structure-test-oce.yaml
+
+smoke-oce: ## Start the nous-oce gateway as UID 1000 and check /readyz
+	ENGINE=$(ENGINE) bash tests/smoke_oce.sh $(OCE_FULL_IMAGE)
 
 smoke: ## Run runtime smoke tests (requires ENMAAS_API_KEY + ENMAAS_BASE_URL)
 	@[[ -n "$$ENMAAS_API_KEY" ]] || { echo "ERROR: ENMAAS_API_KEY not set"; exit 1; }
